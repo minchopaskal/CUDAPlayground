@@ -136,6 +136,7 @@ void CUDAFunction::initialize(CUmodule module, const char *name) {
 
 	CUDAError err = handleCUDAError(cuModuleGetFunction(&func, module, name));
 	if (err.hasError()) {
+		LOG_CUDA_ERROR(err, LogLevel::Error);
 		Logger::log(LogLevel::Error, "Failed to load function: %s!", name);
 	}
 	successfulLoading = !err.hasError();
@@ -265,14 +266,14 @@ CUDAError CUDAManager::testSystem() {
 	arrA_d.upload();
 	arrB_d.upload();
 
-	CUstream stream;
-	RETURN_ON_ERROR(cuStreamCreate(&stream, 0));
+	RETURN_ON_ERROR_HANDLED(dev.uploadConstantParam(&arrSize, "arrSize"));
 
 	// load the adder function
 	CUDAFunction adder(dev.getModule(), "adder");
 	RETURN_ON_ERROR_HANDLED(adder.addParams(arrA_d.handle(), arrB_d.handle(), result_d.handle()));
 
-	RETURN_ON_ERROR_HANDLED(dev.uploadConstantParam(&arrSize, "arrSize"));
+	CUstream stream;
+	RETURN_ON_ERROR(cuStreamCreate(&stream, 0));
 
 	Timer kernelTimer;
 	const int blockDim = 192;
