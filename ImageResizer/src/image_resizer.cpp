@@ -3,10 +3,13 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <third_party\stb_image.h>
 
-ImageResizer::ImageResizer() { }
+ImageResizer::ImageResizer() {
+	// Push a sentinel value since 0 is reserved for InvalidImageHandle
+	images.push_back(ImageData{});
+}
 
 void ImageResizer::freeImage(ImageHandle imgHandle) {
-	if (imgHandle >= images.size()) {
+	if (!checkImageHandle(imgHandle)) {
 		return;
 	}
 
