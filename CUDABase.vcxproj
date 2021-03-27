@@ -179,10 +179,15 @@
       <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
       <CompileOut>$(IntDir)data/%(Filename).ptx</CompileOut>
       <GenerateLineInfo>true</GenerateLineInfo>
+      <NvccCompilation>ptx</NvccCompilation>
+      <CudaRuntime>None</CudaRuntime>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\cuda_manager.cpp" />
+    <ClCompile Include="src\cuda_memory.cpp" />
+    <ClCompile Include="src\logger.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\new.cpp" />
   </ItemGroup>
@@ -190,12 +195,12 @@
     <CudaCompile Include="gpu\kernel.cu" />
   </ItemGroup>
   <ItemGroup>
-    <Natvis Include="EASTL.natvis" />
-  </ItemGroup>
-  <ItemGroup>
+    <ClInclude Include="include\cuda_buffer.h" />
     <ClInclude Include="include\cuda_error_handling.h" />
     <ClInclude Include="include\cuda_manager.h" />
+    <ClInclude Include="include\cuda_memory_defines.h" />
     <ClInclude Include="include\logger.h" />
+    <ClInclude Include="include\cuda_memory.h" />
     <ClInclude Include="include\timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

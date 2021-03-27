@@ -1,33 +1,22 @@
 #pragma once
 
-#include <cstdio>
-
-#define OUT_STREAM stdout
-#define IN_STREAM stdin
-#define ERR_STREAM stderr
-
-enum class LogLevel {
-	Info,
+enum class LogLevel : int {
+	Debug = 0,
+	Error,
 	Warning,
-	Debug,
-	Error
+	Info,
+	InfoFancy,
 };
 
 struct Logger {
-	Logger() = delete;
+	/// Set log level. Each log after this call will be printed only if its log level
+	/// is below or equal to the one specified here.
+	static void setLogLevel(LogLevel lvl);
 
-	static void log(LogLevel lvl, const char *fmt, ...) {
-#ifndef CUDA_DEBUG
-		if (lvl == LogLevel::Debug) {
-			return;
-		}
-#endif
+	/// LogLevel::Error is always logged and LogLevel::Debug is always logged in Debug
+	/// and never in Release.
+	static void log(LogLevel lvl, const char *fmt, ...);
 
-		// TODO: take into consideration the log level
-		va_list args;
-		__va_start(&args, fmt);
-		vfprintf(OUT_STREAM, fmt, args);
-		__crt_va_end(args);
-		fprintf(OUT_STREAM, "\n");
-	}
+private:
+	static int loggingLevel;
 };

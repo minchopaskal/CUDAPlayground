@@ -1,10 +1,14 @@
 #pragma once
 
+#include <Windows.h>
+
 // User
 #include <logger.h>
 
 // CUDA
 #include <cuda.h>
+
+#define massert(x) if (!(x)) DebugBreak()
 
 #define LOG_CUDA_ERROR(err, logLevel) \
 do { \
@@ -38,7 +42,13 @@ do { \
 
 struct CUDAError {
 	CUDAError() : error(CUDA_SUCCESS), name("CUDA_SUCCESS"), desc("") { }
-	CUDAError(CUresult error, const char *name, const char *desc) : error(error), name(name), desc(desc) { }
+	CUDAError(CUresult error, const char *name, const char *desc) : error(error), name(name), desc(desc) { 
+#ifdef CUDA_DEBUG
+		if (error != CUDA_SUCCESS) {
+			DebugBreak();
+		}
+#endif // CUDA_DEBUG
+	}
 
 	bool hasError() const { return error != CUDA_SUCCESS; }
 	CUresult getError() const { return error; }

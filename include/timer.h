@@ -2,14 +2,15 @@
 
 #include <Windows.h>
 
+/// Class for measuring time in milliseconds.
 struct Timer {
-	Timer() {
+	Timer() : frequency(0.0) {
+		startTime.QuadPart = 0;
 		LARGE_INTEGER temp;
 		QueryPerformanceFrequency(&temp);
 		frequency = static_cast<double>(temp.QuadPart) / 1000.0;
-	}
 
-	void start() {
+		// Start the timer
 		QueryPerformanceCounter(&startTime);
 	}
 
@@ -17,6 +18,8 @@ struct Timer {
 		QueryPerformanceCounter(&startTime);
 	}
 	
+	/// Get time since the timer was launched or last restarted
+	/// @return time since last launch in milliseconds
 	float time() {
 		LARGE_INTEGER endTime;
 		QueryPerformanceCounter(&endTime);

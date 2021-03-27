@@ -1,17 +1,20 @@
 #include <cstdio>
 #include <exception>
 
-// EASTL
-#include <EASTL/vector.h>
-
 // User
 #include <cuda_manager.h> 
 
 int main(int argc, char **argv) {
-	CUDAManager cuda;
-	cuda.initialize();
+	initializeCUDAManager("data\\kernel.ptx");
 
-	cuda.testSystem();
+	CUDAManager &cuda = getCUDAManager();
+
+	CUDAError err = cuda.testSystem();
+	if (err.hasError()) {
+		LOG_CUDA_ERROR(err, LogLevel::Error);
+	}
+
+	deinitializeCUDAManager();
 
 	return 0;
 }

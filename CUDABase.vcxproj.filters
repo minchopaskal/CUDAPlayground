@@ -24,16 +24,17 @@
     <ClCompile Include="src\cuda_manager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\cuda_memory.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\logger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="gpu\kernel.cu">
       <Filter>Resource Files</Filter>
     </CudaCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Natvis Include="EASTL.natvis">
-      <Filter>Resource Files</Filter>
-    </Natvis>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\logger.h">
@@ -46,6 +47,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cuda_memory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cuda_memory_defines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\cuda_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
