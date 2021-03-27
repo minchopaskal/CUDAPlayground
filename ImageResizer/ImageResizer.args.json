@@ -1,0 +1,18 @@
+{
+  "FileVersion": 2,
+  "Id": "c338b77e-f1f6-4aed-bb34-d02ae4ae3d8b",
+  "Items": [
+    {
+      "Id": "8c94aa25-37d0-4b74-9f3d-5d401d3f49c5",
+      "Command": "-input img.png"
+    },
+    {
+      "Id": "eac06073-151d-47d9-bb92-871f6a65bf33",
+      "Command": "-oh 54"
+    },
+    {
+      "Id": "061d5c7e-63f9-489c-885f-7f211fc28214",
+      "Command": "-ow 127"
+    }
+  ]
+}

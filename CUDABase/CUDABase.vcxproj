@@ -190,8 +190,6 @@
     <ClCompile Include="src\cuda_manager.cpp" />
     <ClCompile Include="src\cuda_memory.cpp" />
     <ClCompile Include="src\logger.cpp" />
-    <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\new.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="gpu\kernel.cu" />

@@ -90,6 +90,11 @@ struct CUDAManager {
 
 	const std::vector<CUDADevice> &getDevices() const;
 
+	/// Test everything is working correctly.
+	/// Requires a kernel with the following definition
+	/// __global__ void adder(int*, int*, int*)
+	/// in the module and also the following constant:
+	/// __constant__ int arrSize;
 	CUDAError testSystem();
 
 private:
