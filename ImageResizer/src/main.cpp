@@ -80,16 +80,19 @@ int main(int argc, char **argv) {
 	ImageResizer imgResizer;
 	ImageHandle outImgHandle = imgResizer.resize(imgFilePath, outputWidth, outputHeight, nullptr);
 
-	const char *outExt = "_OUT.jpg";
 	std::string outName = imgFilePath;
-	SizeType lastDotIdx = outName.find_last_of('.');
-	if (lastDotIdx != std::string::npos) {
-		outName.erase(lastDotIdx);
+	if (imgOutputPath == nullptr) {
+		const char *outExt = "_OUT.jpg";
+		SizeType lastDotIdx = outName.find_last_of('.');
+		if (lastDotIdx != std::string::npos) {
+			outName.erase(lastDotIdx);
+		}
+
+		outName += outExt;
+		imgOutputPath = outName.c_str();
 	}
 
-	outName += outExt;
-
-	imgResizer.writeOutput(outImgHandle, ImageFormat::JPG, outName.c_str());
+	imgResizer.writeOutput(outImgHandle, ImageFormat::JPG, imgOutputPath);
 
 	deinitializeCUDAManager();
 
