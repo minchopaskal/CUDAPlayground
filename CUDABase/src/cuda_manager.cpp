@@ -101,8 +101,11 @@ CUstream CUDADevice::getDefaultStream(CUDADefaultStreamsEnumeration defStreamEnu
 	}
 
 	massert(streams.size() >= 3);
-
 	const int streamIdx = static_cast<int>(defStreamEnum);
+	if (streamIdx < 0 || streamIdx >= 3) {
+		return NULL;
+	}
+
 	return streams[streamIdx];
 }
 
