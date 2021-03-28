@@ -4,12 +4,14 @@
     <LocalDebuggerCommand>$(TargetPath)</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerCommandArguments>-input img.png -oh 54 -ow 127</LocalDebuggerCommandArguments>
-    <RemoteDebuggerCommandArguments>-input img.png -oh 54 -ow 127</RemoteDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-input yoda.jpeg -ow 1599 -oh 1066</LocalDebuggerCommandArguments>
+    <RemoteDebuggerCommandArguments>-input yoda.jpeg -ow 1599 -oh 1066</RemoteDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerCommand>$(TargetPath)</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerCommandArguments>-input yoda.jpeg -ow 4000 -oh 4000</LocalDebuggerCommandArguments>
+    <RemoteDebuggerCommandArguments>-input yoda.jpeg -ow 4000 -oh 4000</RemoteDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

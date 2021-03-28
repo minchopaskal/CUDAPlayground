@@ -34,5 +34,8 @@
     <ClInclude Include="include\image_resizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="third_party\stb_image_write.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

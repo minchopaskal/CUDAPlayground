@@ -6,6 +6,14 @@
 #include <cuda_memory.h>
 #include <timer.h>
 
+enum class CUDADefaultStreamsEnumeration : int {
+	Execution = 0,
+	Upload,
+	Download,
+
+	Count
+};
+
 struct CUDADevice {
 	CUDADevice();
 	~CUDADevice();
@@ -17,6 +25,7 @@ struct CUDADevice {
 
 	CUdevice getDevice() const;
 	CUmodule getModule() const;
+	CUstream getDefaultStream(CUDADefaultStreamsEnumeration defStreamEnum) const;
 
 	CUDAError getTotalMemory(SizeType &result) const;
 	CUDAError getFreeMemory(SizeType &result) const;
@@ -51,6 +60,7 @@ private:
 	CUDAError loadModule(const char *modulePath);
 	
 private:
+	std::vector<CUstream> streams;
 	CUcontext ctx;
 	CUmodule module;
 	CUdevice dev;
@@ -59,12 +69,39 @@ private:
 };
 
 struct CUDAFunction {
+	CUDAFunction();
 	CUDAFunction(CUmodule module, const char *name);
 
 	void initialize(CUmodule module, const char *name);
 
+	/// Launch the currnet CUDA kernel with the specified thread count
+	/// @param threadCount Number of CUDA threads we want to execute
+	/// @param stream CUDA stream on which to launch the kernel
+	/// @return CUDAError() on success
+	CUDAError launch(SizeType threadCount, CUstream stream);
+
+	/// Launches the kernel and then synchronizes with the stream
+	CUDAError launchSync(SizeType threadCount, CUstream stream);
+
 	template <class T, class ...Types>
-	CUDAError addParams(T param, Types ... paramList);
+	CUDAError addParams(T param, Types ... paramList) {
+		if (!successfulLoading) {
+			CUDAError err(CUDA_ERROR_UNKNOWN, "HOST Error", "Adding parameters to non-loaded funtion!");
+			LOG_CUDA_ERROR(err, LogLevel::Warning);
+			return err;
+		}
+
+		memcpy(currParam, (void*)&param, sizeof(T));
+		kernelParams.push_back(static_cast<void*>(currParam));
+		currParam += sizeof(T);
+		if (currParam > params + paramsSize) {
+			CUDAError err(CUDA_ERROR_UNKNOWN, "HOST Error", "Too many parameters!");
+			LOG_CUDA_ERROR(err, LogLevel::Error);
+			return err;
+		}
+
+		return addParams(paramList...);
+	}
 
 	/// Helper function for the variadic template function addParams.
 	CUDAError addParams() {
@@ -72,7 +109,31 @@ struct CUDAFunction {
 	}
 
 	CUfunction getFunction() const { return func; }
-	void **getParams() { return kernelParams.data(); }
+	void** getParams() { return kernelParams.data(); }
+	
+	SizeType getNumParams() const { return kernelParams.size(); }
+	
+	template <class T>
+	bool changeParam(T *newParam, int paramIndex) {
+		if (!successfulLoading) {
+			CUDAError err(CUDA_ERROR_UNKNOWN, "HOST Error", "Changing parameters of a non-loaded funtion!");
+			LOG_CUDA_ERROR(err, LogLevel::Warning);
+			return err;
+		}
+
+		if (paramIndex < 0 || paramIndex >= kernelParams.size()) {
+			CUDAError err(CUDA_ERROR_UNKNOWN, "HOST Error", "Changing not yet set parameters!");
+			LOG_CUDA_ERROR(err, LogLevel::Warning);
+			return err;
+		}
+
+		void *oldParamPtr = kernelParams[paramIndex];
+		memcpy(oldParamPtr, newParam, sizeof(T));
+
+		return true;
+	}
+
+	void clearParams();
 
 private:
 	static const int paramsSize = 1024;
@@ -82,13 +143,17 @@ private:
 	char params[paramsSize];
 	char *currParam;
 	int successfulLoading;
+
+#ifdef TIME_KERNEL_EXECUTION
+	std::string kernelName;
+#endif
 };
 
 struct CUDAManager {
 	template <class T>
 	T& getAllocator();
 
-	const std::vector<CUDADevice> &getDevices() const;
+	const std::vector<CUDADevice>& getDevices() const;
 
 	/// Test everything is working correctly.
 	/// Requires a kernel with the following definition

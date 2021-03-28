@@ -80,13 +80,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>..\CUDABase\include\;.\include;.\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
     <LibraryPath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2\lib\x64;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>..\CUDABase\include\;.\include;.\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
-    <OutDir>$(SolutionDir)build\$(Platform)\$(Configuration)\</OutDir>
+    <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
     <LibraryPath>C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.2\lib\x64;$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -142,7 +142,7 @@
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <InterleaveSourceInPTX>true</InterleaveSourceInPTX>
       <CodeGeneration>compute_35,sm_35;</CodeGeneration>
-      <GenerateLineInfo>true</GenerateLineInfo>
+      <GenerateLineInfo>false</GenerateLineInfo>
       <FastMath>true</FastMath>
       <PtxAsOptionV>true</PtxAsOptionV>
       <Runtime>MDd</Runtime>
@@ -191,6 +191,7 @@
   <ItemGroup>
     <ClInclude Include="include\image_resizer.h" />
     <ClInclude Include="third_party\stb_image.h" />
+    <ClInclude Include="third_party\stb_image_write.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

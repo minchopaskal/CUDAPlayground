@@ -17,6 +17,11 @@ CUDADevice::~CUDADevice() {
 }
 
 CUDAError CUDADevice::destroy() {
+	for (int i = 0; i < streams.size(); ++i) {
+		RETURN_ON_ERROR(cuStreamDestroy(streams[i]));
+	}
+	streams.clear();
+
 	if (module != NULL) {
 		RETURN_ON_ERROR(cuModuleUnload(module));
 		module = NULL;
@@ -72,6 +77,13 @@ CUDAError CUDADevice::initialize(int deviceOridnal, const char *modulePath) {
 	// cuCtxCreate pushes the context onto the stack, so safe to load the module for this context
 	loadModule(modulePath);
 
+	const int numDefaultStreams = static_cast<int>(CUDADefaultStreamsEnumeration::Count);
+	CUstream defaultStreams[numDefaultStreams];
+	for (int i = 0; i < numDefaultStreams; ++i) {
+		RETURN_ON_ERROR(cuStreamCreate(&defaultStreams[i], 0));
+		streams.push_back(defaultStreams[i]);
+	}
+
 	return CUDAError();
 }
 
@@ -81,6 +93,17 @@ CUdevice CUDADevice::getDevice() const {
 
 CUmodule CUDADevice::getModule() const {
 	return module;
+}
+
+CUstream CUDADevice::getDefaultStream(CUDADefaultStreamsEnumeration defStreamEnum) const {
+	if (dev == CU_DEVICE_INVALID) {
+		return NULL;
+	}
+
+	massert(streams.size() >= 3);
+
+	const int streamIdx = static_cast<int>(defStreamEnum);
+	return streams[streamIdx];
 }
 
 CUDAError CUDADevice::getTotalMemory(SizeType &result) const {
@@ -124,6 +147,8 @@ CUDAError CUDADevice::loadModule(const char *modulePath) {
 CUDAFunction
 ===============================================================
 */
+CUDAFunction::CUDAFunction() : func(NULL), params(""), currParam(params), successfulLoading(false) { }
+
 CUDAFunction::CUDAFunction(CUmodule module, const char *name) 
 	: func(NULL), params(""), currParam(params), successfulLoading(false) {
 	initialize(module, name);
@@ -140,26 +165,49 @@ void CUDAFunction::initialize(CUmodule module, const char *name) {
 		Logger::log(LogLevel::Error, "Failed to load function: %s!", name);
 	}
 	successfulLoading = !err.hasError();
+
+#ifdef TIME_KERNEL_EXECUTION
+	kernelName = name;
+#endif
 }
 
-template <class T, class ...Types>
-CUDAError CUDAFunction::addParams(T param, Types ... paramList) {
-	if (!successfulLoading) {
-		CUDAError err(CUDA_ERROR_UNKNOWN, "HOST Error", "Adding parameters to non-loaded funtion!");
-		LOG_CUDA_ERROR(err, LogLevel::Warning);
-		return err;
-	}
+CUDAError CUDAFunction::launch(SizeType threadCount, CUstream stream) {
+#ifdef TIME_KERNEL_EXECUTION
+	Timer kernelTimer;
+#endif
 
-	memcpy(currParam, (void*)&param, sizeof(T));
-	kernelParams.push_back(static_cast<void*>(currParam));
-	currParam += sizeof(T);
-	if (currParam > params + paramsSize) {
-		CUDAError err(CUDA_ERROR_UNKNOWN, "HOST Error", "Too many parameters!");
-		LOG_CUDA_ERROR(err, LogLevel::Error);
-		return err;
-	}
+	const int blockDim = 192;
+	const int gridDim = threadCount / blockDim + (threadCount % blockDim != 0);
+	RETURN_ON_ERROR(cuLaunchKernel(
+		getFunction(),
+		gridDim, 1, 1,
+		blockDim, 1, 1,
+		0,
+		stream,
+		getParams(),
+		nullptr
+	));
 
-	return addParams(paramList...);
+#ifdef TIME_KERNEL_EXECUTION
+	RETURN_ON_ERROR(cuStreamSynchronize(stream));
+	float kernelTimeMS = kernelTimer.time();
+	Logger::log(LogLevel::InfoFancy, "Execution of CUDA kernel \"%s\" took %.2fms", kernelName.c_str(), kernelTimeMS);
+#endif
+
+	return CUDAError();
+}
+
+CUDAError CUDAFunction::launchSync(SizeType threadCount, CUstream stream) {
+	RETURN_ON_ERROR_HANDLED(launch(threadCount, stream));
+
+	RETURN_ON_ERROR(cuStreamSynchronize(stream));
+	
+	return CUDAError();
+}
+
+void CUDAFunction::clearParams() {
+	currParam = params;
+	kernelParams.clear();
 }
 
 /* 
@@ -276,17 +324,7 @@ CUDAError CUDAManager::testSystem() {
 	RETURN_ON_ERROR(cuStreamCreate(&stream, 0));
 
 	Timer kernelTimer;
-	const int blockDim = 192;
-	const int gridDim = arrSize / blockDim + (arrSize % blockDim != 0);
-	RETURN_ON_ERROR(cuLaunchKernel(
-		adder.getFunction(),
-		gridDim, 1, 1,
-		blockDim, 1, 1,
-		0,
-		stream,
-		adder.getParams(),
-		nullptr
-	));
+	adder.launch(arrSize, stream);
 
 	// We only need to wait on the last stream as it's the last computation sent to the device
 	RETURN_ON_ERROR(cuStreamSynchronize(stream));

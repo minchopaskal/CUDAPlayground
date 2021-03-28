@@ -4,8 +4,18 @@
 #include <vector>
 #include <stack>
 
+#include <cuda_manager.h>
+
 using ImageHandle = size_t;
 #define InvalidImageHandle ImageHandle(0)
+
+enum class ImageFormat {
+	PNG,
+	BMP,
+	TGA,
+	JPG,
+	HDR
+};
 
 struct ImageResizer {
 	
@@ -29,9 +39,15 @@ struct ImageResizer {
 	
 	/// Given an image handle writes its data to the given outputPath.
 	/// @param img Handle to the image we want to output
-	/// @param outputPath Output file path
+	/// @param format Output image format
+	/// @param outputPath Output file path. MUST be non-null.
 	/// @return false if the handle or the image data is invalid.
-	bool writeOutput(ImageHandle img, const char *outputPath) const;
+	bool writeOutput(ImageHandle img, ImageFormat format, const char *outputPath) const;
+
+	/// Opens an image and saves it for future processing
+	/// @param filename Image's file path
+	/// @return Handle to the opened image
+	ImageHandle openImage(const char *filename);
 
 	/// Unloads a saved image given its handle.
 	void freeImage(ImageHandle img);
@@ -51,4 +67,6 @@ private:
 private:
 	std::vector<ImageData> images;
 	std::stack<size_t> freeSlots;
+	const CUDADevice *device;
+	CUDAFunction resizeKernel;
 };

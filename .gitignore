@@ -1,5 +1,5 @@
 x64/
 vs-chromium-project.txt
-EASTL.natvis
 .vs/
 .ptx
+build/

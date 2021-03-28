@@ -4,15 +4,15 @@
   "Items": [
     {
       "Id": "8c94aa25-37d0-4b74-9f3d-5d401d3f49c5",
-      "Command": "-input img.png"
-    },
-    {
-      "Id": "eac06073-151d-47d9-bb92-871f6a65bf33",
-      "Command": "-oh 54"
+      "Command": "-input yoda.jpeg"
     },
     {
       "Id": "061d5c7e-63f9-489c-885f-7f211fc28214",
-      "Command": "-ow 127"
+      "Command": "-ow 4000"
+    },
+    {
+      "Id": "eac06073-151d-47d9-bb92-871f6a65bf33",
+      "Command": "-oh 4000"
     }
   ]
 }

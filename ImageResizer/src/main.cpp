@@ -1,4 +1,5 @@
 #include <cuda_manager.h>
+#include <image_resizer.h>
 
 void testSystem() {
 	CUDAManager &cudaman = getCUDAManager();
@@ -26,15 +27,16 @@ int main(int argc, char **argv) {
 		printUsage(argv[0]);
 		return 1;
 	}
+
 	initializeCUDAManager("data\\resize_kernel.ptx");
 
 	//testSystem();
-	
+
 	const char *imgFilePath = nullptr;
 	const char *imgOutputPath = nullptr;
 	int outputWidth = -1;
 	int outputHeight = -1;
-	// TODO: also add algorithm
+	// TODO: also add which resizing algorithm to use
 
 	for (int i = 1; i < argc; ) {
 		if (strncmp(argv[i], "-h", 2) == 0) {
@@ -75,7 +77,19 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	
-	ImageResizer imgResizer();
+	ImageResizer imgResizer;
+	ImageHandle outImgHandle = imgResizer.resize(imgFilePath, outputWidth, outputHeight, nullptr);
+
+	const char *outExt = "_OUT.jpg";
+	std::string outName = imgFilePath;
+	SizeType lastDotIdx = outName.find_last_of('.');
+	if (lastDotIdx != std::string::npos) {
+		outName.erase(lastDotIdx);
+	}
+
+	outName += outExt;
+
+	imgResizer.writeOutput(outImgHandle, ImageFormat::JPG, outName.c_str());
 
 	deinitializeCUDAManager();
 
