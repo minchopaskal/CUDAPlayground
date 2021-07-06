@@ -1,0 +1,46 @@
+cmake_minimum_required(VERSION 3.17)
+
+project(CUDABase VERSION 0.1 LANGUAGES CUDA CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+if(NOT DEFINED CMAKE_CUDA_STANDARD)
+	set(CMAKE_CUDA_STANDARD 11)
+	set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+endif()
+
+set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
+
+option(COMPILE_PROJECTS "Compile non base projects" FALSE)
+
+find_package(CUDAToolkit)
+
+macro(compilePtx TRG GPU_FILES)
+foreach(GPU_FILE ${GPU_FILES})
+	get_filename_component(FNAME ${GPU_FILE} NAME)
+	get_filename_component(FNAME_NOEXT ${GPU_FILE} NAME_WE)
+
+	set(ARGS
+		-cudart none
+		-ptx
+		-m 64
+		-t 0
+		-arch=sm_52
+		-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
+		${GPU_FILE}
+	)
+
+	add_custom_command(
+		TARGET ${TRG}
+		COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TRG}>/data/
+		COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} ${ARGS}
+		COMMENT "Compiling ${GPU_FILE_NAME}..."
+	)
+endforeach()
+endmacro()
+
+add_subdirectory(CUDABase)
+if (COMPILE_PROJECTS)
+add_subdirectory(ImageResizer)
+endif()

@@ -190,6 +190,8 @@ bool ImageResizer::writeOutput(ImageHandle handle, ImageFormat format, const cha
 		return false;
 	}
 
+	Logger::log(LogLevel::Info, "Writing output to: %s", outputPath);
+
 	ImageData img = images[handle];
 
 	switch (format) {
