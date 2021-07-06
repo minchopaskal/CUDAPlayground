@@ -23,7 +23,7 @@ do { \
 } while (false)
 
 
-#define RETURN_ON_ERROR(x) \
+#define RETURN_ON_CUDA_ERROR(x) \
 do { \
 	CUDAError err_ = handleCUDAError((x)); \
 	if (err_.hasError()) { \
@@ -32,7 +32,7 @@ do { \
 	} \
 } while (false)
 
-#define RETURN_ON_ERROR_HANDLED(x) \
+#define RETURN_ON_CUDA_ERROR_HANDLED(x) \
 do { \
 	CUDAError err_ = (x); \
 	if (err_.hasError()) { \

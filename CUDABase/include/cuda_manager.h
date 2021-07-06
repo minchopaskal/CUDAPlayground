@@ -47,11 +47,11 @@ struct CUDADevice {
 	CUDAError uploadConstantArray(const T *array_h, int arrSize, const char *name) {
 		CUdeviceptr array_d;
 		size_t bytes;
-		RETURN_ON_ERROR(cuModuleGetGlobal(&array_d, &bytes, module, name));
+		RETURN_ON_CUDA_ERROR(cuModuleGetGlobal(&array_d, &bytes, module, name));
 
 		massert(sizeof(T) * arrSize == bytes);
 
-		RETURN_ON_ERROR(cuMemcpyHtoD(array_d, array_h, bytes));
+		RETURN_ON_CUDA_ERROR(cuMemcpyHtoD(array_d, array_h, bytes));
 
 		return CUDAError();
 	}

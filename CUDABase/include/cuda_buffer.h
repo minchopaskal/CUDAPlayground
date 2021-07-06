@@ -35,7 +35,7 @@ public:
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator &allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.allocate(memBlock));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.allocate(memBlock));
 
 		return CUDAError();
 	}
@@ -48,7 +48,7 @@ public:
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator &allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.free(memBlock));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.free(memBlock));
 		memBlock.ptr = NULL;
 		memBlock.size = 0;
 
@@ -71,7 +71,7 @@ public:
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator &allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.upload(memBlock, hostPtr, stream));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.upload(memBlock, hostPtr, stream));
 
 		return CUDAError();
 	}
@@ -92,7 +92,7 @@ public:
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator &allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.download(memBlock, hostPtr, stream));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.download(memBlock, hostPtr, stream));
 
 		return CUDAError();
 	}
@@ -135,13 +135,13 @@ public:
 			deinitialize();
 		}
 
-		RETURN_ON_ERROR(cuMemHostAlloc(&hostPtr, size, CU_MEMHOSTALLOC_PORTABLE));
+		RETURN_ON_CUDA_ERROR(cuMemHostAlloc(&hostPtr, size, CU_MEMHOSTALLOC_PORTABLE));
 
 		memBlock.size = size;
 		
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.allocate(memBlock));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.allocate(memBlock));
 
 		return CUDAError();
 	}
@@ -152,12 +152,12 @@ public:
 			return CUDAError();
 		}
 
-		RETURN_ON_ERROR(cuMemFreeHost(hostPtr));
+		RETURN_ON_CUDA_ERROR(cuMemFreeHost(hostPtr));
 		hostPtr = nullptr;
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.free(memBlock));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.free(memBlock));
 		memBlock.ptr = NULL;
 		memBlock.size = 0;
 
@@ -181,7 +181,7 @@ public:
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator &allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.upload(memBlock, hostPtr, stream));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.upload(memBlock, hostPtr, stream));
 
 		return CUDAError();
 	}
@@ -203,7 +203,7 @@ public:
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator &allocator = cudaman.getAllocator<Allocator>();
-		RETURN_ON_ERROR_HANDLED(allocator.download(memBlock, hostPtr, stream));
+		RETURN_ON_CUDA_ERROR_HANDLED(allocator.download(memBlock, hostPtr, stream));
 
 		return CUDAError();
 	}

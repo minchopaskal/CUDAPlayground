@@ -56,8 +56,8 @@ private:
 //	~CUDAFallbackAllocator() { }
 //
 //	CUDAError initialize() {
-//		RETURN_ON_ERROR(baseAllocator.initialize());
-//		RETURN_ON_ERROR(fallbackAllocator.initialize());
+//		RETURN_ON_CUDA_ERROR(baseAllocator.initialize());
+//		RETURN_ON_CUDA_ERROR(fallbackAllocator.initialize());
 //	}
 //	
 //	CUDAError allocate(CUDAMemBlock &memBlock) {
@@ -66,7 +66,7 @@ private:
 //		}
 //
 //		if (baseAllocator.allocate(memBlock).hasError()) {
-//			RETURN_ON_ERROR(fallbackAllocator.allocate(memBlock));
+//			RETURN_ON_CUDA_ERROR(fallbackAllocator.allocate(memBlock));
 //			fallbackAllocatorBlocks.push_back(&memBlock);
 //		} else {
 //			baseAllocatorBlocks.push_back(memBlocks);
@@ -77,7 +77,7 @@ private:
 //
 //	CUDAError upload(const CUDAMemBlock &memBlock, void *hostPtr) {
 //		if (baseAllocator.upload(memBlock, hostPtr).hasError()) {
-//			RETURN_ON_ERROR(fallbackAllocator.upload(memBlock, hostPtr));
+//			RETURN_ON_CUDA_ERROR(fallbackAllocator.upload(memBlock, hostPtr));
 //		}
 //
 //		return CUDAError();
@@ -85,7 +85,7 @@ private:
 //
 //	CUDAError free(const CUDAMemBlock &memBlock) {
 //		if (baseAllocator.free(memBlock, hostPtr).hasError()) {
-//			RETURN_ON_ERROR(fallbackAllocator.upload(memBlock, hostPtr));
+//			RETURN_ON_CUDA_ERROR(fallbackAllocator.upload(memBlock, hostPtr));
 //		}
 //
 //		return CUDAError();

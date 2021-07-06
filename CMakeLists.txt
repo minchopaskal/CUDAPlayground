@@ -12,7 +12,7 @@ endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 
-option(COMPILE_PROJECTS "Compile non base projects" FALSE)
+option(CUDABASE_COMPILE_PROJECTS "Compile non base projects" FALSE)
 
 find_package(CUDAToolkit)
 
@@ -35,7 +35,7 @@ foreach(GPU_FILE ${GPU_FILES})
 		TARGET ${TRG}
 		COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TRG}>/data/
 		COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} ${ARGS}
-		COMMENT "Compiling ${GPU_FILE_NAME}..."
+		COMMENT "Compiling ${FNAME}..."
 	)
 endforeach()
 endmacro()

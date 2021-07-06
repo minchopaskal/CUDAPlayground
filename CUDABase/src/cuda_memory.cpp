@@ -15,7 +15,7 @@ CUDAError CUDADefaultAllocator::allocate(CUDAMemBlock &memBlock) {
 		return CUDAError(CUDA_ERROR_UNKNOWN, "CUDADefaultAllocator_ERROR_INVALID_SIZE", "");
 	}
 
-	RETURN_ON_ERROR(cuMemAlloc(reinterpret_cast<CUdeviceptr *>(&memBlock.ptr), size_t(memBlock.size)));
+	RETURN_ON_CUDA_ERROR(cuMemAlloc(reinterpret_cast<CUdeviceptr *>(&memBlock.ptr), size_t(memBlock.size)));
 
 	return CUDAError();
 }
@@ -24,9 +24,9 @@ CUDAError CUDADefaultAllocator::upload(const CUDAMemBlock &memBlock, void *hostP
 	massert(memBlock.size > 0);
 
 	if (stream != NULL) {
-		RETURN_ON_ERROR(cuMemcpyHtoDAsync(memBlock.ptr, hostPtr, memBlock.size, stream));
+		RETURN_ON_CUDA_ERROR(cuMemcpyHtoDAsync(memBlock.ptr, hostPtr, memBlock.size, stream));
 	} else {
-		RETURN_ON_ERROR(cuMemcpyHtoD(memBlock.ptr, hostPtr, memBlock.size));
+		RETURN_ON_CUDA_ERROR(cuMemcpyHtoD(memBlock.ptr, hostPtr, memBlock.size));
 	}
 	return CUDAError();
 }
@@ -35,15 +35,15 @@ CUDAError CUDADefaultAllocator::download(const CUDAMemBlock &memBlock, void *hos
 	massert(memBlock.size > 0);
 
 	if (stream != NULL) {
-		RETURN_ON_ERROR(cuMemcpyDtoHAsync(hostPtr, memBlock.ptr, memBlock.size, stream));
+		RETURN_ON_CUDA_ERROR(cuMemcpyDtoHAsync(hostPtr, memBlock.ptr, memBlock.size, stream));
 	} else {
-		RETURN_ON_ERROR(cuMemcpyDtoH(hostPtr, memBlock.ptr, memBlock.size));
+		RETURN_ON_CUDA_ERROR(cuMemcpyDtoH(hostPtr, memBlock.ptr, memBlock.size));
 	}
 	return CUDAError();
 }
 
 CUDAError CUDADefaultAllocator::free(const CUDAMemBlock &memBlock) {
-	RETURN_ON_ERROR(cuMemFree(static_cast<CUdeviceptr>(memBlock.ptr)));
+	RETURN_ON_CUDA_ERROR(cuMemFree(static_cast<CUdeviceptr>(memBlock.ptr)));
 
 	return CUDAError();
 }
@@ -77,7 +77,7 @@ CUDAError CUDAVirtualAllocator::allocate(CUDAMemBlock &memBlock) {
 	for (int i = 0; i < devices.size(); ++i) {
 		const CUDADevice &dev = devices[i];
 		SizeType currDeviceFreeMem;
-		RETURN_ON_ERROR_HANDLED(dev.getFreeMemory(currDeviceFreeMem));
+		RETURN_ON_CUDA_ERROR_HANDLED(dev.getFreeMemory(currDeviceFreeMem));
 		if (currDeviceFreeMem >= requiredMemory) {
 			devIdx = i;
 			break;
@@ -96,7 +96,7 @@ CUDAError CUDAVirtualAllocator::allocate(CUDAMemBlock &memBlock) {
 	cuMemGetAllocationGranularity(&granularity, &allocationProperties, CU_MEM_ALLOC_GRANULARITY_MINIMUM);
 
 	memBlock.size = getPaddedSize(memBlock.size, granularity);
-	RETURN_ON_ERROR(cuMemAddressReserve(&memBlock.ptr, memBlock.size, 0, 0, 0));
+	RETURN_ON_CUDA_ERROR(cuMemAddressReserve(&memBlock.ptr, memBlock.size, 0, 0, 0));
 
 	// Try to create physical blocks which will be mapped to the virtual adress range we just reserved.
 	// If an allocation fails, ask for two times less memory. If we start asking for less memory than is
@@ -112,7 +112,7 @@ CUDAError CUDAVirtualAllocator::allocate(CUDAMemBlock &memBlock) {
 		if (res != CUDA_SUCCESS) {
 			// Memory is too defragmented. Free all allocations and fail.
 			if (physicalAllocationSize == granularity) {
-				RETURN_ON_ERROR_HANDLED(free(memBlock));
+				RETURN_ON_CUDA_ERROR_HANDLED(free(memBlock));
 				return CUDAError(CUDA_ERROR_OUT_OF_MEMORY, "CUDAVirtualAllocator_ERROR_OUT_OF_MEM", "");
 			}
 
@@ -120,7 +120,7 @@ CUDAError CUDAVirtualAllocator::allocate(CUDAMemBlock &memBlock) {
 			continue;
 		}
 
-		RETURN_ON_ERROR(cuMemMap(currPtr, physicalAllocationSize, 0, physicalMemHandle, 0));
+		RETURN_ON_CUDA_ERROR(cuMemMap(currPtr, physicalAllocationSize, 0, physicalMemHandle, 0));
 
 		requiredMemorySize -= physicalAllocationSize;
 		currPtr += physicalAllocationSize;
@@ -134,7 +134,7 @@ CUDAError CUDAVirtualAllocator::allocate(CUDAMemBlock &memBlock) {
 	CUmemAccessDesc accessDesc = {};
 	accessDesc.location = allocationProperties.location;
 	accessDesc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
-	RETURN_ON_ERROR(cuMemSetAccess(memBlock.ptr, memBlock.size, &accessDesc, 1));
+	RETURN_ON_CUDA_ERROR(cuMemSetAccess(memBlock.ptr, memBlock.size, &accessDesc, 1));
 
 	return CUDAError();
 }
@@ -151,9 +151,9 @@ CUDAError CUDAVirtualAllocator::upload(const CUDAMemBlock &memBlock, void *hostP
 		CUDAMemHandle srcHost = hostPtrUVA + offset;
 
 		/*if (stream != NULL) {
-			RETURN_ON_ERROR(cuMemcpyAsync(dstDevice, srcHost, memAlloc.size, stream));
+			RETURN_ON_CUDA_ERROR(cuMemcpyAsync(dstDevice, srcHost, memAlloc.size, stream));
 		} else {
-			RETURN_ON_ERROR(cuMemcpy(dstDevice, srcHost, memAlloc.size));
+			RETURN_ON_CUDA_ERROR(cuMemcpy(dstDevice, srcHost, memAlloc.size));
 		}*/
 		offset += memAlloc.size;
 	}
@@ -172,9 +172,9 @@ CUDAError CUDAVirtualAllocator::download(const CUDAMemBlock &memBlock, void *hos
 		CUDAMemHandle srcDevice = memAlloc.virtualPtr;
 		CUDAMemHandle dstHost = hostPtrUVA + offset;
 		if (stream != NULL) {
-			RETURN_ON_ERROR(cuMemcpyAsync(dstHost, srcDevice, memAlloc.size, stream));
+			RETURN_ON_CUDA_ERROR(cuMemcpyAsync(dstHost, srcDevice, memAlloc.size, stream));
 		} else {
-			RETURN_ON_ERROR(cuMemcpy(dstHost, srcDevice, memAlloc.size));
+			RETURN_ON_CUDA_ERROR(cuMemcpy(dstHost, srcDevice, memAlloc.size));
 		}
 		offset += memAlloc.size;
 	}
@@ -185,11 +185,11 @@ CUDAError CUDAVirtualAllocator::download(const CUDAMemBlock &memBlock, void *hos
 CUDAError CUDAVirtualAllocator::free(const CUDAMemBlock &memBlock) {
 	const std::vector<PhysicalMemAllocation> &allocs = virtualToPhysicalAllocations[memBlock];
 	for (PhysicalMemAllocation memAlloc : allocs) {
-		RETURN_ON_ERROR(cuMemUnmap(memAlloc.virtualPtr, memAlloc.size));
-		RETURN_ON_ERROR(cuMemRelease(memAlloc.physicalPtr));
+		RETURN_ON_CUDA_ERROR(cuMemUnmap(memAlloc.virtualPtr, memAlloc.size));
+		RETURN_ON_CUDA_ERROR(cuMemRelease(memAlloc.physicalPtr));
 	}
 
-	RETURN_ON_ERROR(cuMemAddressFree(memBlock.ptr, memBlock.size));
+	RETURN_ON_CUDA_ERROR(cuMemAddressFree(memBlock.ptr, memBlock.size));
 
 	return CUDAError();
 }
