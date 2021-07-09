@@ -26,11 +26,15 @@ public:
 		if (size == 0) {
 			return CUDAError();
 		}
-		
-		if (memBlock.ptr != NULL) {
-			deinitialize();
-		}
 
+		if (memBlock.ptr != NULL && memBlock.reserved >= size) {
+			memBlock.size = size;
+			return CUDAError();
+		}
+		
+		deinitialize();
+
+		memBlock.reserved = size;
 		memBlock.size = size;
 
 		CUDAManager &cudaman = getCUDAManager();
@@ -43,6 +47,8 @@ public:
 	CUDAError deinitialize() {
 		if (memBlock.ptr == NULL) {
 			massert(memBlock.size == 0);
+			memBlock.size = 0;
+			memBlock.reserved = 0;
 			return CUDAError();
 		}
 
@@ -51,6 +57,7 @@ public:
 		RETURN_ON_CUDA_ERROR_HANDLED(allocator.free(memBlock));
 		memBlock.ptr = NULL;
 		memBlock.size = 0;
+		memBlock.reserved = 0;
 
 		return CUDAError();
 	}
@@ -131,13 +138,21 @@ public:
 			return CUDAError(CUDA_ERROR_UNKNOWN, "CUDAPinnedMemoryBuffer_INVALID_INIT_ARGUMENTS", "");
 		}
 
-		if (hostPtr != nullptr || memBlock.size > 0) {
+		if (memBlock.ptr != NULL && memBlock.reserved >= size) {
+			memBlock.size = size;
+			return CUDAError();
+		}
+
+		if (memBlock.ptr != NULL && memBlock.reserved < size) {
 			deinitialize();
 		}
 
-		RETURN_ON_CUDA_ERROR(cuMemHostAlloc(&hostPtr, size, CU_MEMHOSTALLOC_PORTABLE));
+		if (hostPtr != nullptr) {
+			RETURN_ON_CUDA_ERROR(cuMemHostAlloc(&hostPtr, size, CU_MEMHOSTALLOC_PORTABLE));
+		}
 
 		memBlock.size = size;
+		memBlock.reserved = size;
 		
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator allocator = cudaman.getAllocator<Allocator>();
@@ -147,19 +162,25 @@ public:
 	}
 
 	CUDAError deinitialize() {
-		if (memBlock.ptr == NULL) {
-			massert(hostPtr == nullptr);
-			return CUDAError();
+		if (hostPtr != nullptr) {
+			RETURN_ON_CUDA_ERROR(cuMemFreeHost(hostPtr));
+			hostPtr = nullptr;
 		}
 
-		RETURN_ON_CUDA_ERROR(cuMemFreeHost(hostPtr));
-		hostPtr = nullptr;
+		if (memBlock.ptr == NULL) {
+			massert(hostPtr == nullptr);
+			massert(memBlock.size == 0);
+			memBlock.size = 0;
+			memBlock.reserved = 0;
+			return CUDAError();
+		}
 
 		CUDAManager &cudaman = getCUDAManager();
 		Allocator allocator = cudaman.getAllocator<Allocator>();
 		RETURN_ON_CUDA_ERROR_HANDLED(allocator.free(memBlock));
 		memBlock.ptr = NULL;
 		memBlock.size = 0;
+		memBlock.reserved = 0;
 
 		return CUDAError();
 	}

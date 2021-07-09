@@ -8,7 +8,12 @@
 // CUDA
 #include <cuda.h>
 
-#define massert(x) if (!(x)) DebugBreak()
+#define massert(x) \
+do { \
+	if (!(x)) { \
+		DebugBreak(); \
+	} \
+} while (false)
 
 #define LOG_CUDA_ERROR(err, logLevel) \
 do { \

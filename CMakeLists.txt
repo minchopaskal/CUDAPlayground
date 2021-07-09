@@ -16,28 +16,33 @@ option(CUDABASE_COMPILE_PROJECTS "Compile non base projects" FALSE)
 
 find_package(CUDAToolkit)
 
-macro(compilePtx TRG GPU_FILES)
-foreach(GPU_FILE ${GPU_FILES})
-	get_filename_component(FNAME ${GPU_FILE} NAME)
-	get_filename_component(FNAME_NOEXT ${GPU_FILE} NAME_WE)
+macro(compilePtx TRG GPU_FILES ADDITIONAL_ARGS)
+	if (NOT CUDAToolkit_FOUND)
+		find_package(CUDAToolkit)
+	endif()
 
-	set(ARGS
-		-cudart none
-		-ptx
-		-m 64
-		-t 0
-		-arch=sm_52
-		-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
-		${GPU_FILE}
-	)
+	foreach(GPU_FILE ${GPU_FILES})
+		get_filename_component(FNAME ${GPU_FILE} NAME)
+		get_filename_component(FNAME_NOEXT ${GPU_FILE} NAME_WE)
 
-	add_custom_command(
-		TARGET ${TRG}
-		COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TRG}>/data/
-		COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} ${ARGS}
-		COMMENT "Compiling ${FNAME}..."
-	)
-endforeach()
+		set(ARGS
+			-cudart none
+			-ptx
+			-m 64
+			-t 0
+			-arch=sm_52
+			-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
+			${ADDITIONAL_ARGS}
+			${GPU_FILE}
+		)
+
+		add_custom_command(
+			TARGET ${TRG}
+			COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TRG}>/data/
+			COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} ${ARGS}
+			COMMENT "Compiling ${FNAME}..."
+		)
+	endforeach()
 endmacro()
 
 add_subdirectory(CUDABase)

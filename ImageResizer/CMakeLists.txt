@@ -45,4 +45,4 @@ target_include_directories(
 	${IR_SOURCE_DIR}
 )
 
-compilePtx(ImageResizer ${GPU})
+compilePtx(ImageResizer ${GPU} "")

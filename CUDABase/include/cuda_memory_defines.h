@@ -19,12 +19,18 @@ template <AllocatorType allocatorType>
 struct CUDAMemoryBlock {
 	CUDAMemHandle ptr;
 	SizeType size;
+	SizeType reserved;
 
-	CUDAMemoryBlock() : ptr(NULL), size(0) { }
-	CUDAMemoryBlock(CUDAMemHandle ptr, SizeType size) : ptr(ptr), size(size) { }
+	CUDAMemoryBlock() : ptr(NULL), size(0), reserved(0) { }
+	CUDAMemoryBlock(CUDAMemHandle ptr, SizeType size) : ptr(ptr), size(size), reserved(size) { }
 
 	bool operator==(const CUDAMemoryBlock &other) const {
-		return ptr == other.ptr && size == other.size;
+		const bool result = ptr == other.ptr;
+		if (result) {
+			massert(size == other.size && reserved == other.reserved);
+		}
+
+		return result;
 	}
 };
 
@@ -33,8 +39,10 @@ template <AllocatorType allocatorType>
 struct hash<CUDAMemoryBlock<allocatorType>> {
 	std::size_t operator()(const CUDAMemoryBlock<allocatorType> &memBlock) const {
 		return
+			// TODO: better hash
 			hash<CUDAMemHandle>()(memBlock.ptr) ^
-			(hash<SizeType>()(memBlock.size) << 1);
+			(hash<SizeType>()(memBlock.size) << 8) ^
+			(hash<SizeType>()(memBlock.reserved) << 16);
 	}
 };
 }
