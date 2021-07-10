@@ -39,6 +39,7 @@ target_compile_definitions(
 	CUDABaseLib
 	PRIVATE
 	_CRT_SECURE_NO_WARNINGS
+	CUDA_LIB_PATH=\"${CUDAToolkit_LIBRARY_DIR}\"
 )
 
 target_link_directories(CUDABaseLib PRIVATE ${LIB_DIR})

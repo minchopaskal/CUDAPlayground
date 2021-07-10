@@ -43,7 +43,7 @@ CUDAError CUDADevice::destroy() {
 }
 
 
-CUDAError CUDADevice::initialize(int deviceOridnal, const char *modulePath) {
+CUDAError CUDADevice::initialize(int deviceOridnal, const char *modulePath, bool useDynamicParallelism) {
 	RETURN_ON_CUDA_ERROR_HANDLED(destroy());
 
 	RETURN_ON_CUDA_ERROR(cuDeviceGet(&dev, deviceOridnal));
@@ -75,7 +75,7 @@ CUDAError CUDADevice::initialize(int deviceOridnal, const char *modulePath) {
 	);
 
 	// cuCtxCreate pushes the context onto the stack, so safe to load the module for this context
-	loadModule(modulePath);
+	loadModule(modulePath, useDynamicParallelism);
 
 	const int numDefaultStreams = static_cast<int>(CUDADefaultStreamsEnumeration::Count);
 	CUstream defaultStreams[numDefaultStreams];
@@ -139,8 +139,33 @@ CUDAError CUDADevice::use() const {
 	return CUDAError();
 }
 
-CUDAError CUDADevice::loadModule(const char *modulePath) {
-	RETURN_ON_CUDA_ERROR(cuModuleLoad(&module, modulePath));
+CUDAError CUDADevice::loadModule(const char *modulePath, bool useDynamicParallelism) {
+	if (useDynamicParallelism) {
+		CUlinkState linkState;
+		RETURN_ON_CUDA_ERROR(cuLinkCreate(0, nullptr, nullptr, &linkState));
+		CUjitInputType moduleType = CU_JIT_INPUT_PTX;
+		RETURN_ON_CUDA_ERROR(cuLinkAddFile(linkState, moduleType, modulePath, 0, nullptr, nullptr));
+
+		CUjitInputType libType = CU_JIT_INPUT_LIBRARY;
+		RETURN_ON_CUDA_ERROR(cuLinkAddFile(
+			linkState,
+			libType,
+			CUDA_LIB_PATH "/cudadevrt.lib",
+			0,
+			nullptr,
+			nullptr
+		));
+
+		void *outCubin;
+		size_t outSize;
+		RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &outCubin, &outSize));
+
+		RETURN_ON_CUDA_ERROR(cuModuleLoadData(&module, outCubin));
+
+		cuLinkDestroy(linkState);
+	} else {
+		RETURN_ON_CUDA_ERROR(cuModuleLoad(&module, modulePath));
+	}
 
 	return CUDAError();
 }
@@ -174,7 +199,7 @@ void CUDAFunction::initialize(CUmodule module, const char *name) {
 #endif
 }
 
-CUDAError CUDAFunction::launch(SizeType threadCount, CUstream stream) {
+CUDAError CUDAFunction::launch(unsigned int threadCount, CUstream stream) {
 #ifdef TIME_KERNEL_EXECUTION
 	Timer kernelTimer;
 #endif
@@ -200,7 +225,7 @@ CUDAError CUDAFunction::launch(SizeType threadCount, CUstream stream) {
 	return CUDAError();
 }
 
-CUDAError CUDAFunction::launchSync(SizeType threadCount, CUstream stream) {
+CUDAError CUDAFunction::launchSync(unsigned int threadCount, CUstream stream) {
 	RETURN_ON_CUDA_ERROR_HANDLED(launch(threadCount, stream));
 
 	RETURN_ON_CUDA_ERROR(cuStreamSynchronize(stream));
@@ -218,15 +243,15 @@ void CUDAFunction::clearParams() {
 CUDAManager
 ===============================================================
 */
-CUDAManager::CUDAManager(const char *modulePath) : cudaVersion(0) {
-	initialize(modulePath);
+CUDAManager::CUDAManager(const char *modulePath, bool useDynamicParallelism) : cudaVersion(0) {
+	initialize(modulePath, useDynamicParallelism);
 }
 
 CUDAManager::~CUDAManager() {
 	destroy();
 }
 
-CUDAError CUDAManager::initialize(const char *modulePath) {
+CUDAError CUDAManager::initialize(const char *modulePath, bool useDynamicParallelism) {
 	RETURN_ON_CUDA_ERROR_HANDLED(destroy());
 
 	RETURN_ON_CUDA_ERROR(cuInit(0));
@@ -234,7 +259,7 @@ CUDAError CUDAManager::initialize(const char *modulePath) {
 
 	Logger::log(LogLevel::Info, "CUDA version: %d.%d", cudaVersion / 1000, (cudaVersion % 100) / 10);
 
-	RETURN_ON_CUDA_ERROR_HANDLED(initializeDevices(modulePath));
+	RETURN_ON_CUDA_ERROR_HANDLED(initializeDevices(modulePath, useDynamicParallelism));
 
 	RETURN_ON_CUDA_ERROR_HANDLED(initializeAllocators());
 
@@ -253,7 +278,7 @@ CUDAError CUDAManager::destroy() {
 	return CUDAError();
 }
 
-CUDAError CUDAManager::initializeDevices(const char *modulePath) {
+CUDAError CUDAManager::initializeDevices(const char *modulePath, bool useDynamicParallelism) {
 	int deviceCount = 0;
 	RETURN_ON_CUDA_ERROR(cuDeviceGetCount(&deviceCount));
 
@@ -264,7 +289,7 @@ CUDAError CUDAManager::initializeDevices(const char *modulePath) {
 
 	devices.resize(deviceCount);
 	for (int i = 0; i < devices.size(); ++i) {
-		RETURN_ON_CUDA_ERROR_HANDLED(devices[i].initialize(i, modulePath));
+		RETURN_ON_CUDA_ERROR_HANDLED(devices[i].initialize(i, modulePath, useDynamicParallelism));
 	}
 
 	return CUDAError();
@@ -360,9 +385,9 @@ CUDAVirtualAllocator &CUDAManager::getAllocator<CUDAVirtualAllocator>() { return
 
 static CUDAManager *_cudamanagerSingleton = nullptr;
 
-void initializeCUDAManager(const char *modulePath) {
+void initializeCUDAManager(const char *modulePath, bool useDynamicParallelism) {
 	if (_cudamanagerSingleton == nullptr) {
-		_cudamanagerSingleton = new CUDAManager(modulePath);
+		_cudamanagerSingleton = new CUDAManager(modulePath, useDynamicParallelism);
 	}
 }
 

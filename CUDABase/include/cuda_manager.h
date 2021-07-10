@@ -20,7 +20,7 @@ struct CUDADevice {
 
 	CUDAError destroy();
 
-	CUDAError initialize(int deviceOridnal, const char *modulePath);
+	CUDAError initialize(int deviceOridnal, const char *modulePath, bool useDynamicParallelism);
 	CUDAError use() const;
 
 	CUdevice getDevice() const;
@@ -57,7 +57,7 @@ struct CUDADevice {
 	}
 
 private:
-	CUDAError loadModule(const char *modulePath);
+	CUDAError loadModule(const char *modulePath, bool useDynamicParallelism);
 	
 private:
 	std::vector<CUstream> streams;
@@ -78,10 +78,10 @@ struct CUDAFunction {
 	/// @param threadCount Number of CUDA threads we want to execute
 	/// @param stream CUDA stream on which to launch the kernel
 	/// @return CUDAError() on success
-	CUDAError launch(SizeType threadCount, CUstream stream);
+	CUDAError launch(unsigned int threadCount, CUstream stream);
 
 	/// Launches the kernel and then synchronizes with the stream
-	CUDAError launchSync(SizeType threadCount, CUstream stream);
+	CUDAError launchSync(unsigned int threadCount, CUstream stream);
 
 	template <class T, class ...Types>
 	CUDAError addParams(T param, Types ... paramList) {
@@ -163,15 +163,15 @@ struct CUDAManager {
 	CUDAError testSystem();
 
 private:
-	friend void initializeCUDAManager(const char*);
+	friend void initializeCUDAManager(const char *modulePath, bool useDynamicParallelism);
 	friend void deinitializeCUDAManager();
 	
-	CUDAManager(const char *modulePath);
+	CUDAManager(const char *modulePath, bool useDynamicParallelism);
 	~CUDAManager();
-	CUDAError initialize(const char *modulePath);
+	CUDAError initialize(const char *modulePath, bool useDynamicParallelism);
 	CUDAError destroy();
 
-	CUDAError initializeDevices(const char *modulePath);
+	CUDAError initializeDevices(const char *modulePath, bool useDynamicParallelism);
 	CUDAError initializeAllocators();
 
 private:
@@ -181,6 +181,6 @@ private:
 	int cudaVersion;
 };
 
-void initializeCUDAManager(const char *modulePath);
+void initializeCUDAManager(const char *modulePath, bool useDynamicParallelism);
 void deinitializeCUDAManager();
 CUDAManager &getCUDAManager();

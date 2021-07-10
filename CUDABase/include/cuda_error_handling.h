@@ -33,6 +33,7 @@ do { \
 	CUDAError err_ = handleCUDAError((x)); \
 	if (err_.hasError()) { \
 		LOG_CUDA_ERROR(err_, LogLevel::Error); \
+		DebugBreak(); \
 		return err_; \
 	} \
 } while (false)
