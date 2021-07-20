@@ -13,7 +13,7 @@ public:
 
 	CUDAError allocate(CUDAMemBlock &memBlock);
 
-	CUDAError upload(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream);
+	CUDAError upload(const CUDAMemBlock &memBlock, const void *hostPtr, CUstream stream);
 	CUDAError download(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream);
 
 	CUDAError free(const CUDAMemBlock &memBlock);
@@ -36,7 +36,7 @@ public:
 
 	CUDAError allocate(CUDAMemBlock &memBlock);
 
-	CUDAError upload(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream);
+	CUDAError upload(const CUDAMemBlock &memBlock, const void *hostPtr, CUstream stream);
 	CUDAError download(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream);
 
 	CUDAError free(const CUDAMemBlock &memBlock);

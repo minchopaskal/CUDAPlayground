@@ -29,11 +29,11 @@ macro(compilePtx TRG GPU_FILES ADDITIONAL_ARGS RDC)
 		get_filename_component(FNAME_NOEXT ${GPU_FILE} NAME_WE)
 
 		set(ARGS
-			-cudart static
 			-ptx
 			-m 64
 			-t 0
 			-arch=sm_52
+			$<$<CONFIG:Debug>:-G>
 			-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
 			${ADDITIONAL_ARGS}
 		)

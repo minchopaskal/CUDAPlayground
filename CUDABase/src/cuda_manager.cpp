@@ -10,7 +10,7 @@
 CUDADevice
 ===============================================================
 */
-CUDADevice::CUDADevice() : ctx(NULL), dev(CU_DEVICE_INVALID), module(NULL), name("unknown device"), totalMem(0) { }
+CUDADevice::CUDADevice() : ctx(NULL), linkState(NULL), dev(CU_DEVICE_INVALID), module(NULL), name("unknown device"), totalMem(0) { }
 
 CUDADevice::~CUDADevice() {
 	destroy();
@@ -25,6 +25,10 @@ CUDAError CUDADevice::destroy() {
 	if (module != NULL) {
 		RETURN_ON_CUDA_ERROR(cuModuleUnload(module));
 		module = NULL;
+	}
+
+	if (linkState != NULL) {
+		RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState));
 	}
 
 	if (ctx != NULL) {
@@ -141,8 +145,18 @@ CUDAError CUDADevice::use() const {
 
 CUDAError CUDADevice::loadModule(const char *modulePath, bool useDynamicParallelism) {
 	if (useDynamicParallelism) {
+#ifdef CUDA_DEBUG
+		int generateDebugInfo = 1;
+#else // !CUDA_DEBUG
+		int generateDebugInfo = 0;
+#endif // CUDA_DEBUG
+
+		static constexpr int NUM_LINK_OPTIONS = 1;
+		CUjit_option options[NUM_LINK_OPTIONS] = { CU_JIT_GENERATE_DEBUG_INFO };
+		void *optionValues[] = { (void*)&generateDebugInfo };
+
 		CUlinkState linkState;
-		RETURN_ON_CUDA_ERROR(cuLinkCreate(0, nullptr, nullptr, &linkState));
+		RETURN_ON_CUDA_ERROR(cuLinkCreate(NUM_LINK_OPTIONS, options, optionValues, &linkState));
 		CUjitInputType moduleType = CU_JIT_INPUT_PTX;
 		RETURN_ON_CUDA_ERROR(cuLinkAddFile(linkState, moduleType, modulePath, 0, nullptr, nullptr));
 
@@ -161,8 +175,6 @@ CUDAError CUDADevice::loadModule(const char *modulePath, bool useDynamicParallel
 		RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &outCubin, &outSize));
 
 		RETURN_ON_CUDA_ERROR(cuModuleLoadData(&module, outCubin));
-
-		cuLinkDestroy(linkState);
 	} else {
 		RETURN_ON_CUDA_ERROR(cuModuleLoad(&module, modulePath));
 	}
@@ -190,7 +202,7 @@ void CUDAFunction::initialize(CUmodule module, const char *name) {
 	CUDAError err = handleCUDAError(cuModuleGetFunction(&func, module, name));
 	if (err.hasError()) {
 		LOG_CUDA_ERROR(err, LogLevel::Error);
-		Logger::log(LogLevel::Error, "Failed to load function: %s!", name);
+		Logger::log(LogLevel::Error, "Failed to load function %s", name);
 	}
 	successfulLoading = !err.hasError();
 

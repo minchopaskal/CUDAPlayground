@@ -30,21 +30,29 @@ struct CUDADevice {
 	CUDAError getTotalMemory(SizeType &result) const;
 	CUDAError getFreeMemory(SizeType &result) const;
 
-	/// Uploads host data to device constant memory.
-	/// Note that it works only for variables and not arrays!
+	/// Uploads host data to device constant memory
 	/// Has the same behaviour as calling uploadConstantArray with arrSize==1.
 	/// @param param_h Pointer to host memory.
 	/// @param name Name of the global constant variable in device memory.
+	/// @param index The index at which to copy the host memory if the device constant is an array.
 	template <class T>
-	CUDAError uploadConstantParam(const T *param_h, const char *name) {
-		return uploadConstantArray(param_h, 1, name);
+	CUDAError uploadConstantParam(const T *param_h, const char *name, const SizeType index = SizeType(0)) const {
+		CUdeviceptr array_d;
+		size_t bytes;
+		RETURN_ON_CUDA_ERROR(cuModuleGetGlobal(&array_d, &bytes, module, name));
+
+		massert(sizeof(T) * (index + 1) <= bytes);
+
+		RETURN_ON_CUDA_ERROR(cuMemcpyHtoD(array_d + index * sizeof(T), param_h, bytes));
+
+		return CUDAError();
 	}
 
 	/// Uploads host array to device constant memory array.
 	/// @param array_h Pointer to host array.
 	/// @param name Name of the global constant variable in device memory.
 	template <class T>
-	CUDAError uploadConstantArray(const T *array_h, int arrSize, const char *name) {
+	CUDAError uploadConstantArray(const T *array_h, int arrSize, const char *name) const {
 		CUdeviceptr array_d;
 		size_t bytes;
 		RETURN_ON_CUDA_ERROR(cuModuleGetGlobal(&array_d, &bytes, module, name));
@@ -62,6 +70,7 @@ private:
 private:
 	std::vector<CUstream> streams;
 	CUcontext ctx;
+	CUlinkState linkState;
 	CUmodule module;
 	CUdevice dev;
 	char name[128];

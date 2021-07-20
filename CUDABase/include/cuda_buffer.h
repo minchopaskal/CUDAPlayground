@@ -17,10 +17,10 @@ public:
 		deinitialize();
 	}
 
-	CUDABuffer(const CUDABuffer &) = delete;
-	CUDABuffer &operator=(const CUDABuffer &) = delete;
-	CUDABuffer(CUDABuffer &&) = delete;
-	CUDABuffer &operator=(CUDABuffer &&) = delete;
+	CUDABuffer(const CUDABuffer&) = delete;
+	CUDABuffer &operator=(const CUDABuffer&) = delete;
+	CUDABuffer(CUDABuffer&&) = delete;
+	CUDABuffer &operator=(CUDABuffer&&) = delete;
 
 	CUDAError initialize(SizeType size) {
 		if (size == 0) {
@@ -62,11 +62,11 @@ public:
 		return CUDAError();
 	}
 
-	CUDAError upload(void *hostPtr) {
+	CUDAError upload(const void *hostPtr) {
 		return uploadAsync(hostPtr, NULL);
 	}
 
-	CUDAError uploadAsync(void *hostPtr, CUstream stream) {
+	CUDAError uploadAsync(const void *hostPtr, CUstream stream) {
 		if (memBlock.ptr == NULL) {
 			massert(memBlock.size == 0);
 			return CUDAError(CUDA_ERROR_NOT_INITIALIZED, "CUDABuffer_ERROR_NOT_INITIALIZED", "Attempt to upload uninitalized CUDABuffer!");
@@ -106,6 +106,10 @@ public:
 
 	CUDAMemHandle handle() {
 		return memBlock.ptr;
+	}
+
+	SizeType getSize() const {
+		return memBlock.size;
 	}
 
 private:
@@ -235,6 +239,10 @@ public:
 
 	CUDAMemHandle handle() const {
 		return memBlock.ptr;
+	}
+
+	SizeType getSize() const {
+		return memBlock.size;
 	}
 
 private:

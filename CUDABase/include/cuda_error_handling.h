@@ -38,11 +38,29 @@ do { \
 	} \
 } while (false)
 
+#define RETURN_FALSE_ON_CUDA_ERROR(x) \
+do { \
+	CUDAError err_ = handleCUDAError((x)); \
+	if (err_.hasError()) { \
+		LOG_CUDA_ERROR(err_, LogLevel::Error); \
+		DebugBreak(); \
+		return false; \
+	} \
+} while (false)
+
 #define RETURN_ON_CUDA_ERROR_HANDLED(x) \
 do { \
 	CUDAError err_ = (x); \
 	if (err_.hasError()) { \
 		return err_; \
+	} \
+} while (false)
+
+#define RETURN_FALSE_ON_CUDA_ERROR_HANDLED(x) \
+do { \
+	CUDAError err_ = (x); \
+	if (err_.hasError()) { \
+		return false; \
 	} \
 } while (false)
 

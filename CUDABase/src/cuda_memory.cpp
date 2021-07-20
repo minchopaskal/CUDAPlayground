@@ -20,7 +20,7 @@ CUDAError CUDADefaultAllocator::allocate(CUDAMemBlock &memBlock) {
 	return CUDAError();
 }
 
-CUDAError CUDADefaultAllocator::upload(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream) {
+CUDAError CUDADefaultAllocator::upload(const CUDAMemBlock &memBlock, const void *hostPtr, CUstream stream) {
 	massert(memBlock.size > 0);
 
 	if (stream != NULL) {
@@ -139,7 +139,7 @@ CUDAError CUDAVirtualAllocator::allocate(CUDAMemBlock &memBlock) {
 	return CUDAError();
 }
 
-CUDAError CUDAVirtualAllocator::upload(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream) {
+CUDAError CUDAVirtualAllocator::upload(const CUDAMemBlock &memBlock, const void *hostPtr, CUstream stream) {
 	massert(memBlock.size > 0);
 
 	std::vector<PhysicalMemAllocation> &blocks = virtualToPhysicalAllocations[memBlock];
