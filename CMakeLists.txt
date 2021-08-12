@@ -37,6 +37,7 @@ macro(compilePtx TRG GPU_FILES ADDITIONAL_ARGS RDC)
 			-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
 			${ADDITIONAL_ARGS}
 		)
+
 		if (${RDC})
 			list(APPEND ARGS -rdc=true) # tells nvcc that we will do separate compile and linking steps
 		endif()

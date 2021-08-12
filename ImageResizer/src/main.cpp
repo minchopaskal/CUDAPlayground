@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	initializeCUDAManager("data\\resize_kernel.ptx", false);
+	initializeCUDAManager(std::vector<std::string>{"data\\resize_kernel.ptx"}, false);
 
 	//testSystem();
 

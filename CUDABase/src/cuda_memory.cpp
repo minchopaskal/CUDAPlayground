@@ -10,12 +10,25 @@ CUDAError CUDADefaultAllocator::initialize() {
 	return CUDAError();
 }
 
+CUDAError CUDADefaultAllocator::deinitialize() {
+	// TODO: we need the context also
+	for (auto it = allocations.begin(); it != allocations.end(); ++it) {
+		RETURN_ON_CUDA_ERROR_HANDLED(internalFree(**it));
+	}
+
+	allocations.clear();
+
+	return CUDAError();
+}
+
 CUDAError CUDADefaultAllocator::allocate(CUDAMemBlock &memBlock) {
 	if (memBlock.size <= 0) {
 		return CUDAError(CUDA_ERROR_UNKNOWN, "CUDADefaultAllocator_ERROR_INVALID_SIZE", "");
 	}
 
-	RETURN_ON_CUDA_ERROR(cuMemAlloc(reinterpret_cast<CUdeviceptr *>(&memBlock.ptr), size_t(memBlock.size)));
+	RETURN_ON_CUDA_ERROR(cuMemAlloc(reinterpret_cast<CUdeviceptr*>(&memBlock.ptr), size_t(memBlock.size)));
+
+	allocations.insert(&memBlock);
 
 	return CUDAError();
 }
@@ -42,8 +55,21 @@ CUDAError CUDADefaultAllocator::download(const CUDAMemBlock &memBlock, void *hos
 	return CUDAError();
 }
 
-CUDAError CUDADefaultAllocator::free(const CUDAMemBlock &memBlock) {
+CUDAError CUDADefaultAllocator::free(CUDAMemBlock &memBlock) {
+	RETURN_ON_CUDA_ERROR_HANDLED(internalFree(memBlock));
+
+	auto it = allocations.find(&memBlock);
+	massert(it != allocations.end());
+	allocations.erase(it);
+
+	return CUDAError();
+}
+
+CUDAError CUDADefaultAllocator::internalFree(CUDAMemBlock &memBlock) {
 	RETURN_ON_CUDA_ERROR(cuMemFree(static_cast<CUdeviceptr>(memBlock.ptr)));
+	memBlock.ptr = NULL;
+	memBlock.size = 0;
+	memBlock.reserved = 0;
 
 	return CUDAError();
 }
@@ -58,6 +84,10 @@ SizeType getPaddedSize(SizeType size, SizeType granularity) {
 }
 
 CUDAError CUDAVirtualAllocator::initialize() {
+	return CUDAError();
+}
+
+CUDAError CUDAVirtualAllocator::deinitialize() {
 	return CUDAError();
 }
 
@@ -182,7 +212,7 @@ CUDAError CUDAVirtualAllocator::download(const CUDAMemBlock &memBlock, void *hos
 	return CUDAError();
 }
 
-CUDAError CUDAVirtualAllocator::free(const CUDAMemBlock &memBlock) {
+CUDAError CUDAVirtualAllocator::free(CUDAMemBlock &memBlock) {
 	const std::vector<PhysicalMemAllocation> &allocs = virtualToPhysicalAllocations[memBlock];
 	for (PhysicalMemAllocation memAlloc : allocs) {
 		RETURN_ON_CUDA_ERROR(cuMemUnmap(memAlloc.virtualPtr, memAlloc.size));

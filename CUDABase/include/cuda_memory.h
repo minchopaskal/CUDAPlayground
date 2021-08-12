@@ -10,13 +10,19 @@ struct CUDADefaultAllocator {
 	using CUDAMemBlock = CUDAMemoryBlock<type>;
 public:
 	CUDAError initialize();
+	CUDAError deinitialize();
 
 	CUDAError allocate(CUDAMemBlock &memBlock);
 
 	CUDAError upload(const CUDAMemBlock &memBlock, const void *hostPtr, CUstream stream);
 	CUDAError download(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream);
 
-	CUDAError free(const CUDAMemBlock &memBlock);
+	CUDAError free(CUDAMemBlock &memBlock);
+
+private:
+	CUDAError internalFree(CUDAMemBlock &memBlock);
+
+	std::unordered_set<CUDAMemBlock*> allocations;
 };
 
 struct CUDAVirtualAllocator {
@@ -33,13 +39,14 @@ public:
 
 public:
 	CUDAError initialize();
+	CUDAError deinitialize();
 
 	CUDAError allocate(CUDAMemBlock &memBlock);
 
 	CUDAError upload(const CUDAMemBlock &memBlock, const void *hostPtr, CUstream stream);
 	CUDAError download(const CUDAMemBlock &memBlock, void *hostPtr, CUstream stream);
 
-	CUDAError free(const CUDAMemBlock &memBlock);
+	CUDAError free(CUDAMemBlock &memBlock);
 
 private:
 	std::unordered_map<CUDAMemBlock, std::vector<PhysicalMemAllocation>> virtualToPhysicalAllocations;

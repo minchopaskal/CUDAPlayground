@@ -18,9 +18,10 @@ struct CUDADevice {
 	CUDADevice();
 	~CUDADevice();
 
-	CUDAError destroy();
+	CUDAError deinitialize();
 
-	CUDAError initialize(int deviceOridnal, const char *modulePath, bool useDynamicParallelism);
+	CUDAError initialize(int deviceOridnal, const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
+
 	CUDAError use() const;
 
 	CUdevice getDevice() const;
@@ -65,7 +66,7 @@ struct CUDADevice {
 	}
 
 private:
-	CUDAError loadModule(const char *modulePath, bool useDynamicParallelism);
+	CUDAError loadModule(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 	
 private:
 	std::vector<CUstream> streams;
@@ -172,15 +173,15 @@ struct CUDAManager {
 	CUDAError testSystem();
 
 private:
-	friend void initializeCUDAManager(const char *modulePath, bool useDynamicParallelism);
+	friend void initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 	friend void deinitializeCUDAManager();
 	
-	CUDAManager(const char *modulePath, bool useDynamicParallelism);
+	CUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 	~CUDAManager();
-	CUDAError initialize(const char *modulePath, bool useDynamicParallelism);
-	CUDAError destroy();
+	CUDAError initialize(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
+	CUDAError deinitialize();
 
-	CUDAError initializeDevices(const char *modulePath, bool useDynamicParallelism);
+	CUDAError initializeDevices(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 	CUDAError initializeAllocators();
 
 private:
@@ -190,6 +191,6 @@ private:
 	int cudaVersion;
 };
 
-void initializeCUDAManager(const char *modulePath, bool useDynamicParallelism);
+void initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 void deinitializeCUDAManager();
 CUDAManager &getCUDAManager();

@@ -13,10 +13,10 @@ CUDADevice
 CUDADevice::CUDADevice() : ctx(NULL), linkState(NULL), dev(CU_DEVICE_INVALID), module(NULL), name("unknown device"), totalMem(0) { }
 
 CUDADevice::~CUDADevice() {
-	destroy();
+	deinitialize();
 }
 
-CUDAError CUDADevice::destroy() {
+CUDAError CUDADevice::deinitialize() {
 	for (int i = 0; i < streams.size(); ++i) {
 		RETURN_ON_CUDA_ERROR(cuStreamDestroy(streams[i]));
 	}
@@ -47,8 +47,8 @@ CUDAError CUDADevice::destroy() {
 }
 
 
-CUDAError CUDADevice::initialize(int deviceOridnal, const char *modulePath, bool useDynamicParallelism) {
-	RETURN_ON_CUDA_ERROR_HANDLED(destroy());
+CUDAError CUDADevice::initialize(int deviceOridnal, const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
+	RETURN_ON_CUDA_ERROR_HANDLED(deinitialize());
 
 	RETURN_ON_CUDA_ERROR(cuDeviceGet(&dev, deviceOridnal));
 	RETURN_ON_CUDA_ERROR(cuDeviceGetName(name, 128, dev));
@@ -79,7 +79,7 @@ CUDAError CUDADevice::initialize(int deviceOridnal, const char *modulePath, bool
 	);
 
 	// cuCtxCreate pushes the context onto the stack, so safe to load the module for this context
-	loadModule(modulePath, useDynamicParallelism);
+	loadModule(ptxFiles, useDynamicParallelism);
 
 	const int numDefaultStreams = static_cast<int>(CUDADefaultStreamsEnumeration::Count);
 	CUstream defaultStreams[numDefaultStreams];
@@ -143,23 +143,27 @@ CUDAError CUDADevice::use() const {
 	return CUDAError();
 }
 
-CUDAError CUDADevice::loadModule(const char *modulePath, bool useDynamicParallelism) {
-	if (useDynamicParallelism) {
+CUDAError CUDADevice::loadModule(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
 #ifdef CUDA_DEBUG
-		int generateDebugInfo = 1;
+	int generateDebugInfo = 1;
 #else // !CUDA_DEBUG
-		int generateDebugInfo = 0;
+	int generateDebugInfo = 0;
 #endif // CUDA_DEBUG
 
-		static constexpr int NUM_LINK_OPTIONS = 1;
-		CUjit_option options[NUM_LINK_OPTIONS] = { CU_JIT_GENERATE_DEBUG_INFO };
-		void *optionValues[] = { (void*)&generateDebugInfo };
+	unsigned int optimizationLevel = 4;
 
-		CUlinkState linkState;
-		RETURN_ON_CUDA_ERROR(cuLinkCreate(NUM_LINK_OPTIONS, options, optionValues, &linkState));
-		CUjitInputType moduleType = CU_JIT_INPUT_PTX;
-		RETURN_ON_CUDA_ERROR(cuLinkAddFile(linkState, moduleType, modulePath, 0, nullptr, nullptr));
+	static constexpr int NUM_LINK_OPTIONS = 1;
+	CUjit_option options[NUM_LINK_OPTIONS] = { CU_JIT_GENERATE_DEBUG_INFO };
+	void *optionValues[] = { (void*)&generateDebugInfo };
 
+	CUlinkState linkState;
+	RETURN_ON_CUDA_ERROR(cuLinkCreate(NUM_LINK_OPTIONS, options, optionValues, &linkState));
+	CUjitInputType moduleType = CU_JIT_INPUT_PTX;
+	for (int i = 0; i < ptxFiles.size(); ++i) {
+		RETURN_ON_CUDA_ERROR(cuLinkAddFile(linkState, moduleType, ptxFiles[i].c_str(), 0, nullptr, nullptr));
+	}
+
+	if (useDynamicParallelism) {
 		CUjitInputType libType = CU_JIT_INPUT_LIBRARY;
 		RETURN_ON_CUDA_ERROR(cuLinkAddFile(
 			linkState,
@@ -169,15 +173,15 @@ CUDAError CUDADevice::loadModule(const char *modulePath, bool useDynamicParallel
 			nullptr,
 			nullptr
 		));
-
-		void *outCubin;
-		size_t outSize;
-		RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &outCubin, &outSize));
-
-		RETURN_ON_CUDA_ERROR(cuModuleLoadData(&module, outCubin));
-	} else {
-		RETURN_ON_CUDA_ERROR(cuModuleLoad(&module, modulePath));
 	}
+
+	void *outCubin;
+	size_t outSize;
+	RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &outCubin, &outSize));
+
+	RETURN_ON_CUDA_ERROR(cuModuleLoadData(&module, outCubin));
+
+	RETURN_ON_CUDA_ERROR(cuLinkDestroy(linkState));
 
 	return CUDAError();
 }
@@ -255,23 +259,23 @@ void CUDAFunction::clearParams() {
 CUDAManager
 ===============================================================
 */
-CUDAManager::CUDAManager(const char *modulePath, bool useDynamicParallelism) : cudaVersion(0) {
-	initialize(modulePath, useDynamicParallelism);
+CUDAManager::CUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) : cudaVersion(0) {
+	initialize(ptxFiles, useDynamicParallelism);
 }
 
 CUDAManager::~CUDAManager() {
-	destroy();
+	deinitialize();
 }
 
-CUDAError CUDAManager::initialize(const char *modulePath, bool useDynamicParallelism) {
-	RETURN_ON_CUDA_ERROR_HANDLED(destroy());
+CUDAError CUDAManager::initialize(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
+	RETURN_ON_CUDA_ERROR_HANDLED(deinitialize());
 
 	RETURN_ON_CUDA_ERROR(cuInit(0));
 	RETURN_ON_CUDA_ERROR(cuDriverGetVersion(&cudaVersion));
 
 	Logger::log(LogLevel::Info, "CUDA version: %d.%d", cudaVersion / 1000, (cudaVersion % 100) / 10);
 
-	RETURN_ON_CUDA_ERROR_HANDLED(initializeDevices(modulePath, useDynamicParallelism));
+	RETURN_ON_CUDA_ERROR_HANDLED(initializeDevices(ptxFiles, useDynamicParallelism));
 
 	RETURN_ON_CUDA_ERROR_HANDLED(initializeAllocators());
 
@@ -282,15 +286,19 @@ const std::vector<CUDADevice> &CUDAManager::getDevices() const {
 	return devices;
 }
 
-CUDAError CUDAManager::destroy() {
+CUDAError CUDAManager::deinitialize() {
+	defaultAllocator.deinitialize();
+	virtualAllocator.deinitialize();
+
+	// Destroy devices last as they hold the contexts
 	for (int i = 0; i < devices.size(); ++i) {
-		devices[i].destroy();
+		devices[i].deinitialize();
 	}
 
 	return CUDAError();
 }
 
-CUDAError CUDAManager::initializeDevices(const char *modulePath, bool useDynamicParallelism) {
+CUDAError CUDAManager::initializeDevices(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
 	int deviceCount = 0;
 	RETURN_ON_CUDA_ERROR(cuDeviceGetCount(&deviceCount));
 
@@ -301,7 +309,7 @@ CUDAError CUDAManager::initializeDevices(const char *modulePath, bool useDynamic
 
 	devices.resize(deviceCount);
 	for (int i = 0; i < devices.size(); ++i) {
-		RETURN_ON_CUDA_ERROR_HANDLED(devices[i].initialize(i, modulePath, useDynamicParallelism));
+		RETURN_ON_CUDA_ERROR_HANDLED(devices[i].initialize(i, ptxFiles, useDynamicParallelism));
 	}
 
 	return CUDAError();
@@ -397,9 +405,9 @@ CUDAVirtualAllocator &CUDAManager::getAllocator<CUDAVirtualAllocator>() { return
 
 static CUDAManager *_cudamanagerSingleton = nullptr;
 
-void initializeCUDAManager(const char *modulePath, bool useDynamicParallelism) {
+void initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
 	if (_cudamanagerSingleton == nullptr) {
-		_cudamanagerSingleton = new CUDAManager(modulePath, useDynamicParallelism);
+		_cudamanagerSingleton = new CUDAManager(ptxFiles, useDynamicParallelism);
 	}
 }
 
