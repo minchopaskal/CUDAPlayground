@@ -38,15 +38,17 @@ do { \
 	} \
 } while (false)
 
-#define RETURN_FALSE_ON_CUDA_ERROR(x) \
+#define RETURN_ERR_ON_CUDA_ERROR(x, err) \
 do { \
 	CUDAError err_ = handleCUDAError((x)); \
 	if (err_.hasError()) { \
 		LOG_CUDA_ERROR(err_, LogLevel::Error); \
 		DebugBreak(); \
-		return false; \
+		return err; \
 	} \
 } while (false)
+
+#define RETURN_FALSE_ON_CUDA_ERROR(x) RETURN_ERR_ON_CUDA_ERROR(x, false)
 
 #define RETURN_ON_CUDA_ERROR_HANDLED(x) \
 do { \
@@ -56,13 +58,15 @@ do { \
 	} \
 } while (false)
 
-#define RETURN_FALSE_ON_CUDA_ERROR_HANDLED(x) \
+#define RETURN_ERR_ON_CUDA_ERROR_HANDLED(x, err) \
 do { \
 	CUDAError err_ = (x); \
 	if (err_.hasError()) { \
-		return false; \
+		return err; \
 	} \
 } while (false)
+
+#define RETURN_FALSE_ON_CUDA_ERROR_HANDLED(x) RETURN_ERR_ON_CUDA_ERROR_HANDLED(x, false)
 
 struct CUDAError {
 	CUDAError() : error(CUDA_SUCCESS), name("CUDA_SUCCESS"), desc("") { }

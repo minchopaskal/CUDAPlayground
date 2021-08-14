@@ -27,6 +27,11 @@ macro(compilePtx TRG GPU_FILES ADDITIONAL_ARGS RDC)
 		get_filename_component(FDIR ${GPU_FILE} DIRECTORY)
 		get_filename_component(FNAME ${GPU_FILE} NAME)
 		get_filename_component(FNAME_NOEXT ${GPU_FILE} NAME_WE)
+		get_filename_component(FNAME_EXT ${GPU_FILE} LAST_EXT)
+
+		if (${FNAME_EXT} STREQUAL ".cuh")
+			continue()
+		endif()
 
 		set(ARGS
 			-ptx

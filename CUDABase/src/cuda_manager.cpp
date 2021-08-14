@@ -150,8 +150,6 @@ CUDAError CUDADevice::loadModule(const std::vector<std::string> &ptxFiles, bool 
 	int generateDebugInfo = 0;
 #endif // CUDA_DEBUG
 
-	unsigned int optimizationLevel = 4;
-
 	static constexpr int NUM_LINK_OPTIONS = 1;
 	CUjit_option options[NUM_LINK_OPTIONS] = { CU_JIT_GENERATE_DEBUG_INFO };
 	void *optionValues[] = { (void*)&generateDebugInfo };
@@ -220,7 +218,7 @@ CUDAError CUDAFunction::launch(unsigned int threadCount, CUstream stream) {
 	Timer kernelTimer;
 #endif
 
-	const int blockDim = 192;
+	const int blockDim = 128;
 	const int gridDim = threadCount / blockDim + (threadCount % blockDim != 0);
 	RETURN_ON_CUDA_ERROR(cuLaunchKernel(
 		getFunction(),
