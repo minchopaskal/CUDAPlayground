@@ -173,8 +173,8 @@ CUDAError CUDADevice::loadModule(const std::vector<std::string> &ptxFiles, bool 
 		));
 	}
 
-	void *outCubin;
-	size_t outSize;
+	void *outCubin = nullptr;
+	size_t outSize = 0;
 	RETURN_ON_CUDA_ERROR(cuLinkComplete(linkState, &outCubin, &outSize));
 
 	RETURN_ON_CUDA_ERROR(cuModuleLoadData(&module, outCubin));

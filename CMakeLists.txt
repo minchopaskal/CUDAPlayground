@@ -21,38 +21,40 @@ macro(compilePtx TRG GPU_FILES ADDITIONAL_ARGS RDC)
 		find_package(CUDAToolkit)
 	endif()
 
-	set(OBJECTS "")
+	add_custom_command(
+		TARGET ${TRG}
+		COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TRG}>/data/
+	)
 
 	foreach(GPU_FILE ${GPU_FILES})
 		get_filename_component(FDIR ${GPU_FILE} DIRECTORY)
 		get_filename_component(FNAME ${GPU_FILE} NAME)
 		get_filename_component(FNAME_NOEXT ${GPU_FILE} NAME_WE)
-		get_filename_component(FNAME_EXT ${GPU_FILE} LAST_EXT)
+		get_filename_component(FILE_EXT ${GPU_FILE} LAST_EXT)
 
-		if (${FNAME_EXT} STREQUAL ".cuh")
+		if (${FILE_EXT} STREQUAL ".cuh")
 			continue()
 		endif()
-
-		set(ARGS
+		
+		set(COMPILE_ARGS
 			-ptx
 			-m 64
 			-t 0
 			-arch=sm_52
 			$<$<CONFIG:Debug>:-G>
-			-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
 			${ADDITIONAL_ARGS}
+			-o $<TARGET_FILE_DIR:${TRG}>/data/${FNAME_NOEXT}.ptx
 		)
-
 		if (${RDC})
-			list(APPEND ARGS -rdc=true) # tells nvcc that we will do separate compile and linking steps
+			list(APPEND COMPILE_ARGS -rdc=true) # tells nvcc that we will do separate compile and linking steps
 		endif()
-		list(APPEND ARGS ${GPU_FILE})
+		list(APPEND COMPILE_ARGS 
+			${GPU_FILE}
+		)
 
 		add_custom_command(
 			TARGET ${TRG}
-			COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:${TRG}>/data/
-			COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} ${ARGS}
-			COMMENT "Compiling ${FNAME}...\n"
+			COMMAND ${CUDAToolkit_NVCC_EXECUTABLE} ${COMPILE_ARGS}
 		)
 	endforeach()
 endmacro()
