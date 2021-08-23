@@ -50,6 +50,16 @@ CUDAError CUDADevice::deinitialize() {
 CUDAError CUDADevice::initialize(int deviceOridnal, const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
 	RETURN_ON_CUDA_ERROR_HANDLED(deinitialize());
 
+	struct DestructRAII {
+		CUDADevice &device;
+		bool hasError;
+
+		DestructRAII(CUDADevice &device) : device(device), hasError(true) { }
+		~DestructRAII() {
+			if (hasError) device.deinitialize();
+		}
+	} destructRAII(*this);
+
 	RETURN_ON_CUDA_ERROR(cuDeviceGet(&dev, deviceOridnal));
 	RETURN_ON_CUDA_ERROR(cuDeviceGetName(name, 128, dev));
 	RETURN_ON_CUDA_ERROR(cuDeviceTotalMem(&totalMem, dev));
@@ -58,9 +68,21 @@ CUDAError CUDADevice::initialize(int deviceOridnal, const std::vector<std::strin
 
 	if (!supportUVA) {
 		char errorMsg[256];
-		sprintf_s(errorMsg, "Device %s does not support unified virtual addresing! Exiting...", name);
+		sprintf_s(errorMsg, "Device %s does not support unified virtual addresing!", name);
 		CUDAError err(CUDA_ERROR_INVALID_DEVICE, errorMsg, "");
-		LOG_CUDA_ERROR(err, LogLevel::Debug);
+		LOG_CUDA_ERROR(err, LogLevel::Warning);
+		return err;
+	}
+
+	int cpMajor, cpMinor;
+	RETURN_ON_CUDA_ERROR(cuDeviceGetAttribute(&cpMajor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, dev));
+	RETURN_ON_CUDA_ERROR(cuDeviceGetAttribute(&cpMinor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, dev));
+
+	if (cpMajor < 5 || (cpMajor == 5 && cpMinor < 2)) {
+		char errorMsg[256];
+		sprintf_s(errorMsg, "Device %s have compute capability %d.%d. Minimum supported is 5.2!", name, cpMajor, cpMinor);
+		CUDAError err(CUDA_ERROR_INVALID_DEVICE, errorMsg, "");
+		LOG_CUDA_ERROR(err, LogLevel::Warning);
 		return err;
 	}
 
@@ -72,12 +94,6 @@ CUDAError CUDADevice::initialize(int deviceOridnal, const std::vector<std::strin
 		cuCtxCreate(&ctx, CU_CTX_SCHED_BLOCKING_SYNC | CU_CTX_MAP_HOST, dev)
 	);
 
-	Logger::log(LogLevel::Info, 
-		"Device %s initialized! Total mem: %.2fGB", 
-		name,
-		totalMem / GB_IN_BYTES
-	);
-
 	// cuCtxCreate pushes the context onto the stack, so safe to load the module for this context
 	loadModule(ptxFiles, useDynamicParallelism);
 
@@ -87,6 +103,14 @@ CUDAError CUDADevice::initialize(int deviceOridnal, const std::vector<std::strin
 		RETURN_ON_CUDA_ERROR(cuStreamCreate(&defaultStreams[i], 0));
 		streams.push_back(defaultStreams[i]);
 	}
+
+	Logger::log(LogLevel::Info,
+		"Device %s initialized! Total mem: %.2fGB",
+		name,
+		totalMem / GB_IN_BYTES
+	);
+
+	destructRAII.hasError = false;
 
 	return CUDAError();
 }
@@ -119,6 +143,15 @@ CUDAError CUDADevice::getTotalMemory(SizeType &result) const {
 	}
 
 	result = totalMem;
+	return CUDAError();
+}
+
+CUDAError CUDADevice::getName(std::string &result) const {
+	if (dev == CU_DEVICE_INVALID) {
+		return CUDAError(CUDA_ERROR_NOT_INITIALIZED, "CUDADevice_ERROR_NOT_INITIALIZED", "");
+	}
+
+	result = name;
 	return CUDAError();
 }
 
@@ -257,7 +290,7 @@ void CUDAFunction::clearParams() {
 CUDAManager
 ===============================================================
 */
-CUDAManager::CUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) : cudaVersion(0) {
+CUDAManager::CUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) : cudaVersion(0), initialized(false) {
 	initialize(ptxFiles, useDynamicParallelism);
 }
 
@@ -275,7 +308,15 @@ CUDAError CUDAManager::initialize(const std::vector<std::string> &ptxFiles, bool
 
 	RETURN_ON_CUDA_ERROR_HANDLED(initializeDevices(ptxFiles, useDynamicParallelism));
 
+	if (devices.size() == 0) {
+		deinitialize();
+		Logger::log(LogLevel::Info, "Sorry! No compatible CUDA devices! Exiting...");
+		return CUDAError(CUDA_ERROR_INVALID_DEVICE, "No compatible CUDA devices", "");
+	}
+
 	RETURN_ON_CUDA_ERROR_HANDLED(initializeAllocators());
+
+	initialized = true;
 
 	return CUDAError();
 }
@@ -293,6 +334,8 @@ CUDAError CUDAManager::deinitialize() {
 		devices[i].deinitialize();
 	}
 
+	initialized = false;
+
 	return CUDAError();
 }
 
@@ -306,8 +349,16 @@ CUDAError CUDAManager::initializeDevices(const std::vector<std::string> &ptxFile
 	}
 
 	devices.resize(deviceCount);
-	for (int i = 0; i < devices.size(); ++i) {
-		RETURN_ON_CUDA_ERROR_HANDLED(devices[i].initialize(i, ptxFiles, useDynamicParallelism));
+	int i = 0;
+	for (int ordinal = 0; ordinal < deviceCount; ++i, ++ordinal) {
+		CUDAError err = devices[i].initialize(ordinal, ptxFiles, useDynamicParallelism);
+		if (err.hasError()) {
+			--i;
+		}
+	}
+
+	if (i < devices.size()) {
+		devices.resize(i);
 	}
 
 	return CUDAError();
@@ -403,10 +454,14 @@ CUDAVirtualAllocator &CUDAManager::getAllocator<CUDAVirtualAllocator>() { return
 
 static CUDAManager *_cudamanagerSingleton = nullptr;
 
-void initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
+bool initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism) {
 	if (_cudamanagerSingleton == nullptr) {
 		_cudamanagerSingleton = new CUDAManager(ptxFiles, useDynamicParallelism);
+		if (!_cudamanagerSingleton->initialized) {
+			return false;
+		}
 	}
+	return true;
 }
 
 void deinitializeCUDAManager() {

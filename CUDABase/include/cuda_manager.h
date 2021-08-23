@@ -29,6 +29,7 @@ struct CUDADevice {
 	CUstream getDefaultStream(CUDADefaultStreamsEnumeration defStreamEnum) const;
 
 	CUDAError getTotalMemory(SizeType &result) const;
+	CUDAError getName(std::string &result) const;
 	CUDAError getFreeMemory(SizeType &result) const;
 
 	/// Uploads host data to device constant memory
@@ -173,7 +174,7 @@ struct CUDAManager {
 	CUDAError testSystem();
 
 private:
-	friend void initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
+	friend bool initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 	friend void deinitializeCUDAManager();
 	
 	CUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
@@ -189,8 +190,9 @@ private:
 	CUDADefaultAllocator defaultAllocator;
 	CUDAVirtualAllocator virtualAllocator;
 	int cudaVersion;
+	bool initialized;
 };
 
-void initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
+bool initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDynamicParallelism);
 void deinitializeCUDAManager();
 CUDAManager &getCUDAManager();
