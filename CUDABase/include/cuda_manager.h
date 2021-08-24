@@ -45,7 +45,7 @@ struct CUDADevice {
 
 		massert(sizeof(T) * (index + 1) <= bytes);
 
-		RETURN_ON_CUDA_ERROR(cuMemcpyHtoD(array_d + index * sizeof(T), param_h, bytes));
+		RETURN_ON_CUDA_ERROR(cuMemcpyHtoD(array_d + index * sizeof(T), param_h, sizeof(T)));
 
 		return CUDAError();
 	}
