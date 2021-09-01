@@ -458,6 +458,7 @@ bool initializeCUDAManager(const std::vector<std::string> &ptxFiles, bool useDyn
 	if (_cudamanagerSingleton == nullptr) {
 		_cudamanagerSingleton = new CUDAManager(ptxFiles, useDynamicParallelism);
 		if (!_cudamanagerSingleton->initialized) {
+			_cudamanagerSingleton = nullptr;
 			return false;
 		}
 	}
@@ -470,6 +471,7 @@ void deinitializeCUDAManager() {
 	}
 
 	delete _cudamanagerSingleton;
+	_cudamanagerSingleton = nullptr;
 }
 
 CUDAManager &getCUDAManager() {
