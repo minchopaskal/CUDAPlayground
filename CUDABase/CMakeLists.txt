@@ -24,7 +24,7 @@ source_group("src"           FILES ${SOURCES})
 source_group("include"       FILES ${HEADERS})
 source_group("gpu"           FILES ${RESOURCES_DIR}/kernel.cu)
 
-add_library(CUDABaseLib ${HEADERS} ${SOURCES})
+add_library(CUDABaseLib STATIC ${HEADERS} ${SOURCES})
 
 set_property(TARGET CUDABaseLib PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:CUDABaseLib>)
 
