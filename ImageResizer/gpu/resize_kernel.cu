@@ -94,10 +94,10 @@ extern "C" {
 		for (int i = rangeY.x; i < rangeY.y; ++i) {
 			for (int j = rangeX.x; j < rangeX.y; ++j) {
 				int inputIdx = (i * inputWidth + j) * numComp;
-				float kernelValue = kernel(sample.x - j, sample.y - i, window);
+				float weight = kernel(sample.x - j, sample.y - i, window);
 
 				for (int k = 0; k < numComp; ++k) {
-					const float sampleWeighted = float(inImg[inputIdx + k]) * kernelValue;
+					const float sampleWeighted = float(inImg[inputIdx + k]) * weight;
 					result_[k] += sampleWeighted;
 				}
 			}
@@ -116,10 +116,15 @@ extern "C" {
 		const int numComp,
 		const int outWidth,
 		const int outHeight,
+		const int algorithm,
 		unsigned char *outImg
 	) {
 		const int pixelCount = outWidth * outHeight;
-		const int pixelIdx = min(blockIdx.x * blockDim.x + threadIdx.x, pixelCount - 1);
+		const int pixelIdx = blockIdx.x * blockDim.x + threadIdx.x;
+
+		if (pixelIdx >= pixelCount) {
+			return;
+		}
 
 		const float ratioW = float(outWidth) / inWidth;
 		const float ratioH = float(outHeight) / inHeight;
@@ -134,17 +139,30 @@ extern "C" {
 		int2 floorSample = { int(floor(sample.x)), int(floor(sample.y)) };
 
 		// TODO: these may depend on the sampling algorithm chosen.
-		const int lancsozWindow = 3;
+		int window = 3;
+		samplingKernel kernelPtr;
+		switch (algorithm) {
+		case 0:
+			kernelPtr = nearestNeighbour;
+			window = 1;
+			break;
+		case 1:
+		default:
+			kernelPtr = lanczos2D;
+			window = 3;
+			break;
+		}
+
 		int2 rangeX = {
-			min(max(0, floorSample.x - lancsozWindow - 1), inWidth),
-			min(max(0, floorSample.x + lancsozWindow + 1), inWidth)
+			min(max(0, floorSample.x - window - 1), inWidth),
+			min(max(0, floorSample.x + window + 1), inWidth)
 		};
 		int2 rangeY = {
-			min(max(0, floorSample.y - lancsozWindow - 1), inHeight),
-			min(max(0, floorSample.y + lancsozWindow + 1), inHeight)
+			min(max(0, floorSample.y - window - 1), inHeight),
+			min(max(0, floorSample.y + window + 1), inHeight)
 		};
+		convolve(inImg, kernelPtr, sample, rangeX, rangeY, inWidth, numComp, window, &outImg[pixelIdx * numComp]);
 
-		convolve(inImg, lanczos2D, sample, rangeX, rangeY, inWidth, numComp, lancsozWindow, &outImg[pixelIdx * numComp]);
 	}
 
 }

@@ -90,7 +90,7 @@ ImageResizer::~ImageResizer() {
 	}
 }
 
-ImageHandle ImageResizer::resize(const char *filename, int outputWidth, int outputHeight, ImageHandle *inputImageHandle) {
+ImageHandle ImageResizer::resize(const char *filename, int outputWidth, int outputHeight, ResizeAlgorithm resizingAlgorithm, ImageHandle *inputImageHandle) {
 	ImageHandle _inputImageHandle = openImage(filename);
 	if (inputImageHandle) {
 		*inputImageHandle = _inputImageHandle;
@@ -100,7 +100,7 @@ ImageHandle ImageResizer::resize(const char *filename, int outputWidth, int outp
 		return InvalidImageHandle;
 	}
 
-	ImageHandle outputImageHandle = resize(_inputImageHandle, outputWidth, outputHeight);
+	ImageHandle outputImageHandle = resize(_inputImageHandle, outputWidth, outputHeight, resizingAlgorithm);
 
 	if (inputImageHandle == nullptr) {
 		freeImage(_inputImageHandle);
@@ -109,7 +109,7 @@ ImageHandle ImageResizer::resize(const char *filename, int outputWidth, int outp
 	return outputImageHandle;
 }
 
-ImageHandle ImageResizer::resize(ImageHandle handle, int outputWidth, int outputHeight) {
+ImageHandle ImageResizer::resize(ImageHandle handle, int outputWidth, int outputHeight, ResizeAlgorithm resizingAlgorithm) {
 	if (!checkImageHandle(handle)) {
 		return InvalidImageHandle;
 	}
@@ -154,6 +154,7 @@ ImageHandle ImageResizer::resize(ImageHandle handle, int outputWidth, int output
 		inputImage.numComp,
 		outputWidth,
 		outputHeight,
+		static_cast<int>(resizingAlgorithm),
 		deviceOutputImage.handle()
 	);
 	if (err.hasError()) {

@@ -12,7 +12,7 @@ endif()
 
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release" CACHE STRING "Configs" FORCE)
 
-option(CUDABASE_COMPILE_PROJECTS "Compile non base projects" FALSE)
+option(COMPILE_PROJECTS "Compile non base projects" FALSE)
 
 find_package(CUDAToolkit)
 
